@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#1a4a6a"/>
+      <stop offset="100%" stop-color="#08141f"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#e8f6ff"/>
+      <stop offset="45%" stop-color="#4aa3ff"/>
+      <stop offset="100%" stop-color="#1a4d8a"/>
+    </radialGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <circle cx="96" cy="102" r="38" fill="#0a1824" opacity=".35"/>
+  <circle cx="96" cy="92" r="48" fill="url(#orb)"/>
+  <circle cx="78" cy="78" r="12" fill="#fff" opacity=".55"/>
+  <circle cx="82" cy="86" r="6" fill="#142028"/>
+  <circle cx="108" cy="86" r="6" fill="#142028"/>
+  <circle cx="83.5" cy="85" r="2" fill="#fff"/>
+  <circle cx="109.5" cy="85" r="2" fill="#fff"/>
+  <path d="M118 70 L148 58 L140 92 Z" fill="#e30a17"/>
+  <circle cx="46" cy="48" r="10" fill="#ff6b4a"/>
+  <circle cx="148" cy="54" r="9" fill="#3ddc84"/>
+  <circle cx="40" cy="138" r="9" fill="#4aa3ff"/>
+  <circle cx="150" cy="140" r="10" fill="#c48a4a"/>
+  <polygon points="96,28 102,42 88,42" fill="#f4d03f"/>
+</svg>

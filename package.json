@@ -1,0 +1,17 @@
+{
+  "name": "elementer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Element Savaşı",
+  "scripts": {
+    "www": "node copy-www.js",
+    "cap:sync": "node copy-www.js && npx cap sync android",
+    "apk": "node copy-www.js && npx cap sync android && cmd /c \"set JAVA_HOME=C:\\Program Files\\Android\\Android Studio\\jbr&& cd android && gradlew.bat assembleDebug\""
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/haptics": "^8.0.2"
+  }
+}

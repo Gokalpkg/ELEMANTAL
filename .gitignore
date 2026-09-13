@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Local Tools, JDK & Android SDK
+.tools/
+
+# Web distribution / build
+www/
+
+# Android Build Outputs & Caches
+*.apk
+*.aab
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/src/main/assets/public/
+android/local.properties
+local.properties
+
+# IDE & OS
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db
+
+# Screenshots & personal media
+WhatsApp Image*.jpeg
+
+# Backups & logs
+*.backup*
+*.log
+

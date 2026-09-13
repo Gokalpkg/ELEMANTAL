@@ -1,0 +1,13 @@
+{
+  "appId": "com.elementer.savas",
+  "appName": "Element Savaşı",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

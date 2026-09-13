@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Element Savaşı</string>
+    <string name="title_activity_main">Element Savaşı</string>
+    <string name="package_name">com.elementer.savas</string>
+    <string name="custom_url_scheme">com.elementer.savas</string>
+</resources>

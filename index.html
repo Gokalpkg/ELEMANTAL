@@ -3651,7 +3651,7 @@ function makeEnemy(p, type, extra) {
 }
 
 let lookFx = [];
-let player, enemies, playerProjectiles, enemyProjectiles, skillShots, orbs, particles, zones, sparks, corpses, obstacles, hazards, drops, xpGems, bolts;
+let player, enemies, playerProjectiles, enemyProjectiles, skillShots, orbs, particles, zones, sparks, corpses, obstacles, hazards, drops, xpGems, bolts, bossTelegraphs;
 let wave, running, paused, menuOpen, waveTimer, shake, time, score, biomeIndex, shieldTimer, shieldOn, forestTick, rockTimer, regenTick;
 let pickHistory, lockedCombos, pendingElement, skillState, skillUiKey, pendingRewards, rerollsLeft, continuesLeft, spawnMinDist;
 let joyActive, joyAnchor, joyVec, lastTime, fireTimer, wasMoving, shotCount;
@@ -3681,7 +3681,7 @@ function emptyState() {
   lookFx = [];
   stains = [];
   groundMarks = [];
-  enemies = []; playerProjectiles = []; enemyProjectiles = []; skillShots = []; orbs = []; particles = []; zones = []; sparks = []; corpses = [];
+  enemies = []; playerProjectiles = []; enemyProjectiles = []; skillShots = []; orbs = []; particles = []; zones = []; sparks = []; corpses = []; bossTelegraphs = [];
   obstacles = []; hazards = []; drops = []; xpGems = []; bolts = []; crystals = [];
   wave = 1; pickHistory = []; lockedCombos = []; pendingElement = null; pendingRewards = [];
   skillState = []; skillUiKey = '';
@@ -4040,7 +4040,7 @@ function spawnWave() {
   if (isBossWave) {
     const cfg = getBiomeBossConfig(biome.key, wave);
     makeEnemy(placeAway(), 'boss', {
-      speed: 0.62 + wave*0.01, shootTimer: 64, raged:false, ring:0,
+      speed: 1.45 + wave * 0.015, shootTimer: 64, raged:false, ring:0,
       hp: 34+wave*6, maxHp: 34+wave*6, r: cfg.r, slamCd: 90,
       title: cfg.title, phaseTitle: cfg.phaseTitle, bossType: cfg.bossType,
       layers: cfg.layers,
@@ -6644,11 +6644,14 @@ function update(dt, now) {
         en.wetUntil = Math.max(en.wetUntil||0, performance.now() + 500);
       }
     });
-    if (Math.hypot(h.x-player.x, h.y-player.y) < h.r - 6) {
+    if (Math.hypot(h.x-player.x, h.y-player.y) < h.r - 4) {
       if (h.type === 'lava' && player.invuln <= 0 && shieldOn <= 0) damagePlayer(2);
       if (h.type === 'water') { player.vx *= 0.92; player.vy *= 0.92; }
-      if (h.type === 'sand') { player.vx *= 0.86; player.vy *= 0.86; }
+      if (h.type === 'sand') { player.vx *= 0.84; player.vy *= 0.84; }
       if (h.type === 'ice') { player.vx *= 0.985; player.vy *= 0.985; }
+      if (h.type === 'caramel') { player.vx *= 0.68; player.vy *= 0.68; }
+      if (h.type === 'ketchup') { player.vx *= 1.12; player.vy *= 1.12; if (Math.random() < 0.25) burst(player.x, player.y, '#e53935', 2, 1); }
+      if (h.type === 'bramble') { player.vx *= 0.78; player.vy *= 0.78; if (Math.random() < 0.05 && player.invuln <= 0 && shieldOn <= 0) damagePlayer(1); }
     }
   });
   if (currentBiome().key === 'forest') {
@@ -7081,197 +7084,580 @@ function updateBossAi(en, dt, player, biome, now) {
     return;
   }
 
-  // 4. Normal Movement toward player (when not dashing or burrowed)
-  const st = villagerStep(en, player.x, player.y);
-  tryMove(en, st.x * spd * dt, st.y * spd * dt);
+  // 4. Relentless Colossus March toward player (when not dashing or burrowed)
+  const bAng = Math.atan2(player.y - en.y, player.x - en.x);
+  const moveDx = Math.cos(bAng) * spd * dt;
+  const moveDy = Math.sin(bAng) * spd * dt;
+  tryMove(en, moveDx, moveDy);
+  en.walkTimer = (en.walkTimer || 0) + (spd * dt * 0.16);
+
+  // Heavy titan footstep stomp dust
+  if (Math.sin((en.walkTimer || 0) * 2) > 0.85 && (!en.lastFootstep || now - en.lastFootstep > 260)) {
+    en.lastFootstep = now;
+    const dustX = en.x + (Math.sin(en.walkTimer) > 0 ? 16 : -16);
+    const dustY = en.y + en.r * 0.52;
+    burst(dustX, dustY, '#8d6e63', 3, 1.5);
+  }
+
+  // Smooth attack lunge recovery
+  if (en.atkLungeX) en.atkLungeX *= 0.82;
+  if (en.atkLungeY) en.atkLungeY *= 0.82;
+
   const reach = en.r + player.r + 8;
   if (dist < reach) {
     en.hitCooldown = (en.hitCooldown || 0) - dt;
     if (en.hitCooldown <= 0) {
       damagePlayer(en.phase2 ? 9 : 7);
       en.hitCooldown = 60;
+      shake = Math.max(shake, 8);
     }
   }
 
-  // 5. Signature Special Attacks
-  en.specialCd = (en.specialCd || 100) - dt;
-  const cdLimit = en.phase2 ? 90 : 140;
+  // 5. Signature Special Attacks with Telegraphed Warnings
+  en.specialCd = (en.specialCd || 110) - dt;
+  const cdLimit = en.phase2 ? 80 : 125;
 
-  if (bk === 'lava') {
+  if (bk === 'stone') {
+    // 1. Kadim Taş Titanı Golgoth
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
-      if (Math.random() < 0.55 || dist > 140) {
-        const dAng = Math.atan2(player.y - en.y, player.x - en.x);
-        const dSpd = en.phase2 ? 7.8 : 6.2;
-        en.dashVx = Math.cos(dAng) * dSpd;
-        en.dashVy = Math.sin(dAng) * dSpd;
-        en.dashT = en.phase2 ? 28 : 22;
-        spawnFloatText(en.x, en.y - 32, 'Alev Hücumu!', '#ff3d00');
-        playSfx('skill', 0.25, 220);
-        burst(en.x, en.y, '#ff3d00', 16, 3.5);
+      en.stoneAlt = !en.stoneAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 22;
+      en.atkLungeY = Math.sin(atAng) * 22;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#ffb74d';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.stoneAlt) {
+        // Attack A: Sismik Zemin Çatlağı
+        spawnFloatText(en.x, en.y - 36, 'Sismik Çatlak!', '#ffb74d');
+        playSfx('skill', 0.25, 200);
+        const fAng = atAng;
+        const fLen = en.phase2 ? 280 : 230;
+        bossTelegraphs.push({
+          kind: 'fissure', x: en.x, y: en.y, angle: fAng, len: fLen,
+          duration: 48, t: 0, color: '#ffb74d',
+          onTrigger: (bt) => {
+            shake = Math.max(shake, 16);
+            camKick = Math.max(camKick, 10);
+            playSfx('explode', 0.35, 180);
+            triggerScreenFlash('#ffb74d', 0.22, 100);
+            const steps = 7;
+            for (let s = 1; s <= steps; s++) {
+              const px = bt.x + Math.cos(bt.angle) * (s * (bt.len / steps));
+              const py = bt.y + Math.sin(bt.angle) * (s * (bt.len / steps));
+              burst(px, py, '#8d6e63', 10, 3.2);
+              burst(px, py, '#ffb74d', 6, 2.2);
+              particles.push({ x: px, y: py, r: 6, maxR: 36, life: 0.8, color: '#8d6e63', lw: 3 });
+              if (Math.hypot(player.x - px, player.y - py) < 30) {
+                damagePlayer(en.phase2 ? 12 : 9);
+                player.slowUntil = performance.now() + 1000;
+                player.slowFactor = 0.5;
+              }
+            }
+          }
+        });
       } else {
-        spawnFloatText(en.x, en.y - 32, 'Lav Yağmuru!', '#ff9100');
-        const count = en.phase2 ? 6 : 4;
-        for (let k = 0; k < count; k++) {
-          const ma = (Math.PI * 2 / count) * k + Math.random() * 0.4;
-          const mDist = 60 + Math.random() * 110;
-          enemyProjectiles.push({
-            x: en.x, y: en.y,
-            vx: Math.cos(ma) * 2.8, vy: Math.sin(ma) * 2.8,
-            r: 7, dmg: 7, ox: en.x, oy: en.y, maxDist: mDist,
-            kind: 'magma_mortar', rot: 0
-          });
-        }
-        playSfx('explode', 0.25, 300);
+        // Attack B: Dev Kaya Fırlatması
+        spawnFloatText(en.x, en.y - 36, 'Dev Kaya!', '#a1887f');
+        playSfx('skill', 0.22, 260);
+        bossTelegraphs.push({
+          kind: 'reticle', x: player.x, y: player.y, r: 48,
+          duration: 52, t: 0, color: '#8d6e63',
+          onTrigger: (bt) => {
+            burst(bt.x, bt.y, '#8d6e63', 22, 4.0);
+            burst(bt.x, bt.y, '#ffffff', 12, 2.5);
+            shake = Math.max(shake, 14);
+            playSfx('explode', 0.3, 220);
+            if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+              damagePlayer(en.phase2 ? 13 : 10);
+            }
+            for (let k = 0; k < 4; k++) {
+              const sa = k * (Math.PI / 2) + 0.25;
+              enemyProjectiles.push({
+                x: bt.x, y: bt.y, vx: Math.cos(sa) * 3.2, vy: Math.sin(sa) * 3.2,
+                r: 6.5, dmg: 6, ox: bt.x, oy: bt.y, maxDist: 150,
+                kind: 'rock_fist', face: sa
+              });
+            }
+          }
+        });
       }
     }
-  } else if (bk === 'storm') {
+  } else if (bk === 'lava') {
+    // 2. Lav Lordu İfrit
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
-      spawnFloatText(en.x, en.y - 32, 'Şimşek Işınlanması!', '#00e5ff');
-      burst(en.x, en.y, '#00e5ff', 16, 3.5);
-      const tAng = Math.random() * Math.PI * 2;
-      en.x = clampWorldX(player.x + Math.cos(tAng) * 95, 50);
-      en.y = clampWorldY(player.y + Math.sin(tAng) * 95, 50);
-      burst(en.x, en.y, '#ffeb3b', 20, 4);
-      shake = Math.max(shake, 10);
-      playSfx('skill2', 0.28, 480);
-      const novaN = en.phase2 ? 10 : 7;
-      for (let k = 0; k < novaN; k++) {
-        const na = (Math.PI * 2 / novaN) * k;
-        enemyProjectiles.push({
-          x: en.x, y: en.y, vx: Math.cos(na) * 3.2, vy: Math.sin(na) * 3.2,
-          r: 6.5, dmg: 7, ox: en.x, oy: en.y, maxDist: 220,
-          kind: 'ball_lightning', rot: 0
+      en.lavaAlt = !en.lavaAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 24;
+      en.atkLungeY = Math.sin(atAng) * 24;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#ff3d00';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.lavaAlt) {
+        // Attack A: Magma Gayzerleri
+        spawnFloatText(en.x, en.y - 36, 'Magma Gayzerleri!', '#ff3d00');
+        playSfx('skill', 0.24, 220);
+        const count = en.phase2 ? 4 : 3;
+        for (let k = 0; k < count; k++) {
+          const gx = clampWorldX(player.x + (Math.random() - 0.5) * 140, 60);
+          const gy = clampWorldY(player.y + (Math.random() - 0.5) * 140, 60);
+          bossTelegraphs.push({
+            kind: 'circle', x: gx, y: gy, r: 40,
+            duration: 44 + k * 8, t: 0, color: '#ff3d00',
+            onTrigger: (bt) => {
+              burst(bt.x, bt.y, '#ff3d00', 20, 4.2);
+              burst(bt.x, bt.y, '#ffeb3b', 12, 3.0);
+              shake = Math.max(shake, 8);
+              playSfx('explode', 0.25, 320);
+              hazards.push({ x: bt.x, y: bt.y, r: 28, type: 'lava', until: performance.now() + 3800 });
+              if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+                damagePlayer(en.phase2 ? 11 : 8);
+                player.burnUntil = performance.now() + 2500;
+              }
+            }
+          });
+        }
+      } else {
+        // Attack B: Alev Hücumu
+        const dAng = atAng;
+        bossTelegraphs.push({
+          kind: 'line', x: en.x, y: en.y,
+          targetX: en.x + Math.cos(dAng) * 260, targetY: en.y + Math.sin(dAng) * 260,
+          w: 32, duration: 38, t: 0, color: '#ff3d00',
+          onTrigger: (bt) => {
+            const dSpd = en.phase2 ? 8.2 : 6.5;
+            en.dashVx = Math.cos(dAng) * dSpd;
+            en.dashVy = Math.sin(dAng) * dSpd;
+            en.dashT = en.phase2 ? 30 : 24;
+            spawnFloatText(en.x, en.y - 32, 'Alev Hücumu!', '#ff3d00');
+            playSfx('skill', 0.28, 220);
+            burst(en.x, en.y, '#ff3d00', 18, 4);
+          }
         });
       }
     }
   } else if (bk === 'forest') {
+    // 3. Ulu Orman Koruyucusu
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
-      if (en.phase2 && (!en.forestSummoned || Math.random() < 0.4)) {
-        en.forestSummoned = true;
-        spawnFloatText(en.x, en.y - 32, 'Orman Uyanışı!', '#2e7d32');
-        for (let k = 0; k < 2; k++) {
-          const sa = Math.random() * Math.PI * 2;
-          makeEnemy({ x: en.x + Math.cos(sa) * 35, y: en.y + Math.sin(sa) * 35 }, 'tank');
-        }
+      en.forestAlt = !en.forestAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 20;
+      en.atkLungeY = Math.sin(atAng) * 20;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#76ff03';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.forestAlt) {
+        // Attack A: Dikenli Sarmaşık Kapanı
+        spawnFloatText(en.x, en.y - 36, 'Sarmaşık Kapanı!', '#2e7d32');
+        playSfx('skill', 0.22, 280);
+        bossTelegraphs.push({
+          kind: 'circle', x: player.x, y: player.y, r: 52,
+          duration: 50, t: 0, color: '#2e7d32',
+          onTrigger: (bt) => {
+            burst(bt.x, bt.y, '#2e7d32', 20, 3.8);
+            burst(bt.x, bt.y, '#76ff03', 12, 2.5);
+            hazards.push({ x: bt.x, y: bt.y, r: 42, type: 'bramble', until: performance.now() + 4200 });
+            if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+              damagePlayer(en.phase2 ? 10 : 7);
+              player.slowUntil = performance.now() + 1800;
+              player.slowFactor = 0.35;
+              spawnFloatText(player.x, player.y - 20, 'Kök Saldı!', '#76ff03');
+            }
+          }
+        });
       } else {
-        spawnFloatText(en.x, en.y - 32, 'Zehirli Sporlar!', '#76ff03');
-        const sCount = en.phase2 ? 5 : 3;
+        // Attack B: Zehirli Spor Sarmalı
+        spawnFloatText(en.x, en.y - 36, 'Zehirli Sporlar!', '#76ff03');
+        playSfx('skill', 0.22, 340);
+        const sCount = en.phase2 ? 7 : 5;
         for (let k = 0; k < sCount; k++) {
-          const sang = Math.atan2(player.y - en.y, player.x - en.x) + (k - 1) * 0.35;
+          const sang = atAng + (k - (sCount - 1) / 2) * 0.32;
           enemyProjectiles.push({
-            x: en.x, y: en.y, vx: Math.cos(sang) * 2.2, vy: Math.sin(sang) * 2.2,
-            r: 7, dmg: 6, ox: en.x, oy: en.y, maxDist: 240,
+            x: en.x, y: en.y, vx: Math.cos(sang) * 2.4, vy: Math.sin(sang) * 2.4,
+            r: 7, dmg: 6, ox: en.x, oy: en.y, maxDist: 250,
             kind: 'toxic_spore', rot: 0
           });
         }
-        groundMarks.push({ x: player.x, y: player.y, kind: 'root', until: performance.now() + 3000 });
-        playSfx('skill', 0.22, 320);
+      }
+    }
+  } else if (bk === 'ice') {
+    // 4. Kutup Hükümdarı Yeti
+    if (en.specialCd <= 0) {
+      en.specialCd = cdLimit;
+      en.iceAlt = !en.iceAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 22;
+      en.atkLungeY = Math.sin(atAng) * 22;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#00e5ff';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.iceAlt) {
+        // Attack A: Dondurucu Kar Fırtınası
+        spawnFloatText(en.x, en.y - 36, 'Buzul Fırtınası!', '#00e5ff');
+        playSfx('skill', 0.24, 300);
+        const bAng = atAng;
+        bossTelegraphs.push({
+          kind: 'cone', x: en.x, y: en.y, angle: bAng, range: 230,
+          spread: Math.PI * 0.42, duration: 46, t: 0, color: '#00e5ff',
+          onTrigger: (bt) => {
+            shake = Math.max(shake, 10);
+            playSfx('wave', 0.3);
+            burst(en.x + Math.cos(bAng) * 60, en.y + Math.sin(bAng) * 60, '#00e5ff', 24, 4.5);
+            const pAng = Math.atan2(player.y - en.y, player.x - en.x);
+            const angDiff = Math.abs(normalizeAngle(pAng - bAng));
+            const pDist = Math.hypot(player.x - en.x, player.y - en.y);
+            if (angDiff < bt.spread * 0.5 && pDist < bt.range) {
+              damagePlayer(en.phase2 ? 10 : 7);
+              player.vx += Math.cos(bAng) * 8.5;
+              player.vy += Math.sin(bAng) * 8.5;
+              player.slowUntil = performance.now() + 2200;
+              player.slowFactor = 0.45;
+              spawnFloatText(player.x, player.y - 20, 'Dondu!', '#80deea');
+            }
+          }
+        });
+      } else {
+        // Attack B: Buz Sarkıtı Bombardımanı
+        spawnFloatText(en.x, en.y - 36, 'Buz Sarkıtları!', '#80deea');
+        playSfx('skill2', 0.22, 420);
+        const count = en.phase2 ? 4 : 3;
+        for (let k = 0; k < count; k++) {
+          const ix = clampWorldX(player.x + (Math.random() - 0.5) * 120, 50);
+          const iy = clampWorldY(player.y + (Math.random() - 0.5) * 120, 50);
+          bossTelegraphs.push({
+            kind: 'reticle', x: ix, y: iy, r: 38,
+            duration: 40 + k * 10, t: 0, color: '#00e5ff',
+            onTrigger: (bt) => {
+              burst(bt.x, bt.y, '#00e5ff', 16, 3.5);
+              burst(bt.x, bt.y, '#ffffff', 10, 2.2);
+              playSfx('explode', 0.22, 380);
+              if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+                damagePlayer(en.phase2 ? 11 : 8);
+                player.slowUntil = performance.now() + 1500;
+              }
+            }
+          });
+        }
+      }
+    }
+  } else if (bk === 'storm') {
+    // 5. Yıldırım Titanı Raijin
+    if (en.specialCd <= 0) {
+      en.specialCd = cdLimit;
+      en.stormAlt = !en.stormAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 20;
+      en.atkLungeY = Math.sin(atAng) * 20;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#ffd600';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.stormAlt) {
+        // Attack A: İlahi Şimşek Çağrısı
+        spawnFloatText(en.x, en.y - 36, 'İlahi Şimşek!', '#ffd600');
+        playSfx('skill2', 0.28, 480);
+        const count = en.phase2 ? 4 : 3;
+        for (let k = 0; k < count; k++) {
+          const tx = clampWorldX(player.x + (k === 0 ? 0 : (Math.random() - 0.5) * 130), 50);
+          const ty = clampWorldY(player.y + (k === 0 ? 0 : (Math.random() - 0.5) * 130), 50);
+          bossTelegraphs.push({
+            kind: 'reticle', x: tx, y: ty, r: 36,
+            duration: 44 + k * 8, t: 0, color: '#ffd600',
+            onTrigger: (bt) => {
+              shake = Math.max(shake, 14);
+              triggerScreenFlash('#ffd600', 0.28, 90);
+              playSfx('explode', 0.32, 450);
+              burst(bt.x, bt.y, '#ffd600', 20, 4.5);
+              burst(bt.x, bt.y, '#00e5ff', 12, 3.2);
+              particles.push({ x: bt.x, y: bt.y, r: 4, maxR: 55, life: 0.9, color: '#ffffff', lw: 3 });
+              if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+                damagePlayer(en.phase2 ? 13 : 9);
+              }
+            }
+          });
+        }
+      } else {
+        // Attack B: Dönen Statik Küre Mayınları
+        spawnFloatText(en.x, en.y - 36, 'Statik Küreler!', '#00e5ff');
+        burst(en.x, en.y, '#00e5ff', 16, 3.5);
+        playSfx('skill2', 0.25, 420);
+        const novaN = en.phase2 ? 8 : 5;
+        for (let k = 0; k < novaN; k++) {
+          const na = (Math.PI * 2 / novaN) * k;
+          enemyProjectiles.push({
+            x: en.x, y: en.y, vx: Math.cos(na) * 2.8, vy: Math.sin(na) * 2.8,
+            r: 7, dmg: 7, ox: en.x, oy: en.y, maxDist: 240,
+            kind: 'ball_lightning', rot: 0
+          });
+        }
       }
     }
   } else if (bk === 'water') {
+    // 6. Derinlik Lordu Leviathan
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
-      spawnFloatText(en.x, en.y - 32, 'Derinlik Girdabı!', '#00b0ff');
-      zones.push({
-        x: player.x, y: player.y, r: en.phase2 ? 110 : 85,
-        life: 140, maxLife: 140, color: '#00b0ff', kind: 'pull', pull: en.phase2 ? 4.8 : 3.6, dmgTick: 0
-      });
-      const wCount = en.phase2 ? 8 : 5;
-      for (let k = 0; k < wCount; k++) {
-        const wa = (Math.PI * 2 / wCount) * k;
-        enemyProjectiles.push({
-          x: en.x, y: en.y, vx: Math.cos(wa) * 2.7, vy: Math.sin(wa) * 2.7,
-          r: 7, dmg: 7, ox: en.x, oy: en.y, maxDist: 220,
-          kind: 'hydro_wave', face: wa
+      en.waterAlt = !en.waterAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 24;
+      en.atkLungeY = Math.sin(atAng) * 24;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#00b0ff';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.waterAlt) {
+        // Attack A: Abis Girdabı
+        spawnFloatText(en.x, en.y - 36, 'Abis Girdabı!', '#00b0ff');
+        playSfx('bubble', 0.28);
+        bossTelegraphs.push({
+          kind: 'circle', x: player.x, y: player.y, r: en.phase2 ? 100 : 85,
+          duration: 60, t: 0, color: '#00b0ff',
+          onTrigger: (bt) => {
+            burst(bt.x, bt.y, '#00b0ff', 24, 4.5);
+            burst(bt.x, bt.y, '#ffffff', 14, 3);
+            playSfx('wave', 0.32);
+            shake = Math.max(shake, 10);
+            zones.push({
+              x: bt.x, y: bt.y, r: bt.r,
+              life: 120, maxLife: 120, color: '#00b0ff', kind: 'pull', pull: en.phase2 ? 4.8 : 3.6, dmgTick: 0
+            });
+            if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+              damagePlayer(en.phase2 ? 10 : 7);
+            }
+          }
         });
-      }
-      playSfx('bubble', 0.25);
-    }
-  } else if (bk === 'sand') {
-    if (en.specialCd <= 0) {
-      en.specialCd = cdLimit;
-      if (Math.random() < 0.55) {
-        en.burrowT = en.phase2 ? 35 : 45;
-        spawnFloatText(en.x, en.y - 32, 'Kum Altı Pususu!', '#ffb300');
-        burst(en.x, en.y, '#ffd54f', 16, 3);
-        playSfx('skill', 0.2, 280);
       } else {
-        spawnFloatText(en.x, en.y - 32, 'Akrep İğneleri!', '#00e676');
-        const vCount = en.phase2 ? 6 : 4;
-        const vBase = Math.atan2(player.y - en.y, player.x - en.x);
-        for (let k = 0; k < vCount; k++) {
-          const va = vBase + (k - (vCount - 1) / 2) * 0.25;
+        // Attack B: Tsunami Dalgaları
+        spawnFloatText(en.x, en.y - 36, 'Tsunami Dalgası!', '#26c6da');
+        playSfx('wave', 0.28);
+        const wCount = en.phase2 ? 8 : 5;
+        for (let k = 0; k < wCount; k++) {
+          const wa = (Math.PI * 2 / wCount) * k;
           enemyProjectiles.push({
-            x: en.x, y: en.y, vx: Math.cos(va) * 3.4, vy: Math.sin(va) * 3.4,
-            r: 5.5, dmg: 6, ox: en.x, oy: en.y, maxDist: 260,
-            kind: 'venom_needle', face: va
+            x: en.x, y: en.y, vx: Math.cos(wa) * 2.8, vy: Math.sin(wa) * 2.8,
+            r: 7.5, dmg: 7, ox: en.x, oy: en.y, maxDist: 240,
+            kind: 'hydro_wave', face: wa
           });
         }
-        playSfx('skill', 0.2, 420);
+      }
+    }
+  } else if (bk === 'sand') {
+    // 7. Çöl Firavunu Akrep Kral
+    if (en.specialCd <= 0) {
+      en.specialCd = cdLimit;
+      en.sandAlt = !en.sandAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 22;
+      en.atkLungeY = Math.sin(atAng) * 22;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#00e676';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.sandAlt) {
+        // Attack A: Batak Kum Tuzağı
+        spawnFloatText(en.x, en.y - 36, 'Batak Kum!', '#ffd54f');
+        playSfx('skill', 0.22, 260);
+        bossTelegraphs.push({
+          kind: 'circle', x: player.x, y: player.y, r: 60,
+          duration: 48, t: 0, color: '#ffd54f',
+          onTrigger: (bt) => {
+            burst(bt.x, bt.y, '#ffd54f', 18, 3.5);
+            hazards.push({ x: bt.x, y: bt.y, r: 45, type: 'sand', until: performance.now() + 4500 });
+            if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+              damagePlayer(en.phase2 ? 9 : 6);
+              player.slowUntil = performance.now() + 2000;
+              player.slowFactor = 0.45;
+            }
+          }
+        });
+      } else {
+        // Attack B: Zehir İğnesi Hamlesi
+        const vAng = atAng;
+        bossTelegraphs.push({
+          kind: 'line', x: en.x, y: en.y,
+          targetX: en.x + Math.cos(vAng) * 270, targetY: en.y + Math.sin(vAng) * 270,
+          w: 24, duration: 40, t: 0, color: '#00e676',
+          onTrigger: (bt) => {
+            spawnFloatText(en.x, en.y - 32, 'Ölümcül İğne!', '#00e676');
+            playSfx('skill', 0.24, 440);
+            const vCount = en.phase2 ? 6 : 4;
+            for (let k = 0; k < vCount; k++) {
+              const va = vAng + (k - (vCount - 1) / 2) * 0.22;
+              enemyProjectiles.push({
+                x: en.x, y: en.y, vx: Math.cos(va) * 3.6, vy: Math.sin(va) * 3.6,
+                r: 6, dmg: 7, ox: en.x, oy: en.y, maxDist: 280,
+                kind: 'venom_needle', face: va
+              });
+            }
+          }
+        });
       }
     }
   } else if (bk === 'night') {
+    // 8. Karanlık Kontu Archon
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
-      spawnFloatText(en.x, en.y - 32, 'Kan Tırpanı!', '#ff1744');
-      const bBase = Math.atan2(player.y - en.y, player.x - en.x);
-      for (let k = -1; k <= 1; k++) {
-        const ba = bBase + k * 0.35;
-        enemyProjectiles.push({
-          x: en.x, y: en.y, vx: Math.cos(ba) * 3.1, vy: Math.sin(ba) * 3.1,
-          r: 6.5, dmg: 8, ox: en.x, oy: en.y, maxDist: 260,
-          kind: 'blood_scythe', face: ba
-        });
-      }
-      const batN = en.phase2 ? 8 : 5;
-      for (let k = 0; k < batN; k++) {
-        const bAng = (Math.PI * 2 / batN) * k;
-        enemyProjectiles.push({
-          x: en.x, y: en.y, vx: Math.cos(bAng) * 2.5, vy: Math.sin(bAng) * 2.5,
-          r: 5, dmg: 6, ox: en.x, oy: en.y, maxDist: 200,
-          kind: 'bat', face: bAng
-        });
-      }
-      playSfx('skill2', 0.22, 380);
-    }
-  } else {
-    // Stone / Ice / Default Ground Quake Slam
-    if (en.slamT > 0) {
-      const inside = Math.hypot(player.x - en.slamX, player.y - en.slamY) < en.slamR + player.r;
-      if (inside) en.slamWasIn = true;
-      if (en.slamWasIn && !inside && en.slamT < 22) tryPerfectDodge();
-      en.slamT -= dt;
-      if (en.slamT <= 0) {
-        const sCol = bk === 'stone' ? '#cfd8dc' : '#00e5ff';
-        burst(en.slamX, en.slamY, sCol, 26, 4.0);
-        burst(en.slamX, en.slamY, '#ffffff', 14, 2.5);
-        shake = Math.max(shake, 14);
-        if (Math.hypot(player.x - en.slamX, player.y - en.slamY) < en.slamR + player.r) {
-          damagePlayer(en.phase2 ? 11 : 8);
-          if (bk === 'ice') player.slowUntil = performance.now() + 1800;
-        }
-        const projKind = bk === 'stone' ? 'rock_fist' : 'icicle';
-        for (let k = 0; k < 4; k++) {
-          const sa = k * (Math.PI / 2) + 0.2;
+      en.nightAlt = !en.nightAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 22;
+      en.atkLungeY = Math.sin(atAng) * 22;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#ff1744';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.nightAlt) {
+        // Attack A: Kan Tırpanı
+        spawnFloatText(en.x, en.y - 36, 'Kan Tırpanı!', '#ff1744');
+        playSfx('skill2', 0.24, 340);
+        const bBase = atAng;
+        for (let k = -1; k <= 1; k++) {
+          const ba = bBase + k * 0.32;
           enemyProjectiles.push({
-            x: en.slamX, y: en.slamY,
-            vx: Math.cos(sa) * 2.6, vy: Math.sin(sa) * 2.6,
-            r: 6.5, dmg: 7, ox: en.slamX, oy: en.slamY, maxDist: 130,
-            kind: projKind, face: sa
+            x: en.x, y: en.y, vx: Math.cos(ba) * 3.3, vy: Math.sin(ba) * 3.3,
+            r: 7, dmg: 8, ox: en.x, oy: en.y, maxDist: 270,
+            kind: 'blood_scythe', face: ba
           });
         }
-        playSfx('explode', 0.22, 280);
-        en.slamCd = en.phase2 ? 100 : 150;
+      } else {
+        // Attack B: Sülük Yarasa Sürüsü
+        spawnFloatText(en.x, en.y - 36, 'Sülük Yarasalar!', '#d500f9');
+        playSfx('skill2', 0.24, 400);
+        const batN = en.phase2 ? 8 : 5;
+        for (let k = 0; k < batN; k++) {
+          const bAng = (Math.PI * 2 / batN) * k;
+          enemyProjectiles.push({
+            x: en.x, y: en.y, vx: Math.cos(bAng) * 2.6, vy: Math.sin(bAng) * 2.6,
+            r: 5.5, dmg: 6, ox: en.x, oy: en.y, maxDist: 220,
+            kind: 'bat', face: bAng, bossRef: en
+          });
+        }
       }
-    } else {
-      en.slamCd = (en.slamCd || 140) - dt;
-      if (en.slamCd <= 0) {
-        en.slamX = player.x; en.slamY = player.y; en.slamR = en.phase2 ? 65 : 56;
-        en.slamT = 90; en.slamWasIn = false;
-        spawnFloatText(en.x, en.y - 30, bk === 'stone' ? 'Sismik Deprem!' : 'Buzul Sıçrayışı!', '#00e5ff');
+    }
+  } else if (bk === 'pink') {
+    // 9. Şeker Diyarı Kraliçesi
+    if (en.specialCd <= 0) {
+      en.specialCd = cdLimit;
+      en.pinkAlt = !en.pinkAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 20;
+      en.atkLungeY = Math.sin(atAng) * 20;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#ec407a';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.pinkAlt) {
+        // Attack A: Yapışkan Karamel Göletleri
+        spawnFloatText(en.x, en.y - 36, 'Karamel Tuzağı!', '#ec407a');
+        playSfx('bubble', 0.25);
+        const count = en.phase2 ? 4 : 3;
+        for (let k = 0; k < count; k++) {
+          const cx = clampWorldX(player.x + (Math.random() - 0.5) * 130, 50);
+          const cy = clampWorldY(player.y + (Math.random() - 0.5) * 130, 50);
+          bossTelegraphs.push({
+            kind: 'circle', x: cx, y: cy, r: 44,
+            duration: 45 + k * 8, t: 0, color: '#ec407a',
+            onTrigger: (bt) => {
+              burst(bt.x, bt.y, '#ec407a', 18, 3.8);
+              burst(bt.x, bt.y, '#f48fb1', 12, 2.5);
+              playSfx('bubble', 0.22);
+              hazards.push({ x: bt.x, y: bt.y, r: 35, type: 'caramel', until: performance.now() + 4500 });
+              if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+                damagePlayer(en.phase2 ? 9 : 7);
+                player.slowUntil = performance.now() + 1800;
+                player.slowFactor = 0.35;
+                spawnFloatText(player.x, player.y - 20, 'Yapıştı!', '#ec407a');
+              }
+            }
+          });
+        }
+      } else {
+        // Attack B: Lolipop Bombardımanı
+        spawnFloatText(en.x, en.y - 36, 'Lolipop Yağmuru!', '#f06292');
+        playSfx('skill', 0.24, 380);
+        const count = en.phase2 ? 4 : 3;
+        for (let k = 0; k < count; k++) {
+          const lx = clampWorldX(player.x + (Math.random() - 0.5) * 120, 50);
+          const ly = clampWorldY(player.y + (Math.random() - 0.5) * 120, 50);
+          bossTelegraphs.push({
+            kind: 'reticle', x: lx, y: ly, r: 42,
+            duration: 48 + k * 10, t: 0, color: '#f06292',
+            onTrigger: (bt) => {
+              burst(bt.x, bt.y, '#ec407a', 20, 4.0);
+              burst(bt.x, bt.y, '#ffffff', 10, 2.5);
+              burst(bt.x, bt.y, '#00e5ff', 8, 2.0);
+              shake = Math.max(shake, 10);
+              playSfx('explode', 0.25, 420);
+              if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
+                damagePlayer(en.phase2 ? 11 : 8);
+              }
+            }
+          });
+        }
+      }
+    }
+  } else if (bk === 'ketchup') {
+    // 10. Ketçap İmparatoru
+    if (en.specialCd <= 0) {
+      en.specialCd = cdLimit;
+      en.ketchupAlt = !en.ketchupAlt;
+      const atAng = Math.atan2(player.y - en.y, player.x - en.x);
+      en.atkLungeX = Math.cos(atAng) * 22;
+      en.atkLungeY = Math.sin(atAng) * 22;
+      en.atkSlashFx = 16;
+      en.atkSlashCol = '#fbc02d';
+      en.squashT = 0.45;
+      en.squashScale = 1.18;
+      if (en.ketchupAlt) {
+        // Attack A: Kızgın Hardal Alev Püskürtücü
+        spawnFloatText(en.x, en.y - 36, 'Acı Hardal Alevi!', '#fbc02d');
+        playSfx('skill', 0.25, 240);
+        const mAng = atAng;
+        bossTelegraphs.push({
+          kind: 'cone', x: en.x, y: en.y, angle: mAng, range: 220,
+          spread: Math.PI * 0.38, duration: 44, t: 0, color: '#fbc02d',
+          onTrigger: (bt) => {
+            shake = Math.max(shake, 9);
+            playSfx('explode', 0.28, 260);
+            const mCount = en.phase2 ? 8 : 5;
+            for (let k = 0; k < mCount; k++) {
+              const ka = bt.angle + (Math.random() - 0.5) * bt.spread;
+              const kSpd = 2.4 + Math.random() * 1.6;
+              enemyProjectiles.push({
+                x: en.x, y: en.y, vx: Math.cos(ka) * kSpd, vy: Math.sin(ka) * kSpd,
+                r: 7, dmg: 7, ox: en.x, oy: en.y, maxDist: bt.range,
+                kind: 'mustard_fire', face: ka
+              });
+            }
+          }
+        });
+      } else {
+        // Attack B: Kaygan Ketçap Şeridi
+        const kAng = atAng;
+        bossTelegraphs.push({
+          kind: 'line', x: en.x, y: en.y,
+          targetX: en.x + Math.cos(kAng) * 250, targetY: en.y + Math.sin(kAng) * 250,
+          w: 34, duration: 38, t: 0, color: '#d32f2f',
+          onTrigger: (bt) => {
+            const kSpd = en.phase2 ? 8.5 : 6.8;
+            en.dashVx = Math.cos(kAng) * kSpd;
+            en.dashVy = Math.sin(kAng) * kSpd;
+            en.dashT = en.phase2 ? 30 : 24;
+            spawnFloatText(en.x, en.y - 32, 'Ketçap Kaydırağı!', '#d32f2f');
+            playSfx('skill', 0.26, 260);
+            burst(en.x, en.y, '#d32f2f', 18, 4);
+            for (let s = 1; s <= 4; s++) {
+              const kx = en.x + Math.cos(kAng) * (s * 50);
+              const ky = en.y + Math.sin(kAng) * (s * 50);
+              hazards.push({ x: kx, y: ky, r: 28, type: 'ketchup', until: performance.now() + 4500 });
+            }
+          }
+        });
       }
     }
   }
@@ -7488,12 +7874,28 @@ function updateBossAi(en, dt, player, biome, now) {
     }
   }
 
+  // Boss Tehlike Alanı (Telegraph) Güncellemesi & Patlama Tetikleyicileri
+  if (bossTelegraphs && bossTelegraphs.length > 0) {
+    for (let i = bossTelegraphs.length - 1; i >= 0; i--) {
+      const bt = bossTelegraphs[i];
+      bt.t = (bt.t || 0) + dt;
+      if (bt.t >= bt.duration) {
+        try {
+          if (typeof bt.onTrigger === 'function') bt.onTrigger(bt);
+        } catch (err) {
+          console.error('[Telegraph] Error in onTrigger:', err);
+        }
+        bossTelegraphs.splice(i, 1);
+      }
+    }
+  }
+
   for (let i=enemyProjectiles.length-1;i>=0;i--) {
     const p = enemyProjectiles[i];
     p.x += p.vx*dt; p.y += p.vy*dt;
     if (p.kind === 'bat') {
       p.face = Math.atan2(p.vy, p.vx);
-    } else if (p.kind === 'thorn' || p.kind === 'magma') {
+    } else if (p.kind === 'thorn' || p.kind === 'magma' || p.kind === 'rock_boulder' || p.kind === 'lollipop_bomb') {
       p.rot = (p.rot || 0) + 0.15 * dt;
     }
     if (shotTooFar(p, 172)) {
@@ -7513,7 +7915,12 @@ function updateBossAi(en, dt, player, biome, now) {
         damagePlayer(p.dmg);
         p.hitPlayer = true;
       }
-      const bColor = p.kind === 'icicle' ? '#80deea' : p.kind === 'bat' ? '#e91e63' : p.kind === 'thorn' ? '#81c784' : '#ff9800';
+      const bColor = p.kind === 'icicle' ? '#80deea' :
+                     p.kind === 'bat' ? '#e91e63' :
+                     p.kind === 'thorn' ? '#81c784' :
+                     p.kind === 'rock_boulder' ? '#8d6e63' :
+                     p.kind === 'lollipop_bomb' ? '#ec407a' :
+                     p.kind === 'mustard_fire' ? '#fbc02d' : '#ff9800';
       burst(p.x, p.y, bColor, 8, 2.4);
       if (!p.pierce) enemyProjectiles.splice(i,1);
     }
@@ -8912,6 +9319,132 @@ const SPR_MAGMA_CINDER = [
   [0, 2, 0]
 ];
 
+function normalizeAngle(a) {
+  while (a < -Math.PI) a += Math.PI * 2;
+  while (a > Math.PI) a -= Math.PI * 2;
+  return a;
+}
+
+function drawBossTelegraphs(ctx, time) {
+  if (!bossTelegraphs || bossTelegraphs.length === 0) return;
+  bossTelegraphs.forEach(bt => {
+    const progress = Math.min(1, (bt.t || 0) / (bt.duration || 1));
+    ctx.save();
+
+    if (bt.kind === 'circle' || bt.kind === 'reticle') {
+      // 1. Outer warning border
+      ctx.strokeStyle = bt.color || '#ff1744';
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.5 + Math.sin(time * 0.3) * 0.2;
+      ctx.beginPath();
+      ctx.arc(bt.x, bt.y, bt.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 2. Expanding inner danger fill
+      ctx.fillStyle = bt.color || '#ff1744';
+      ctx.globalAlpha = 0.14 + progress * 0.26;
+      ctx.beginPath();
+      ctx.arc(bt.x, bt.y, bt.r * progress, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Reticle corner brackets and center crosshair
+      if (bt.kind === 'reticle') {
+        const retR = bt.r * (1.7 - progress * 0.7);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.85;
+        // Center crosshair
+        ctx.beginPath();
+        ctx.moveTo(bt.x - 7, bt.y); ctx.lineTo(bt.x + 7, bt.y);
+        ctx.moveTo(bt.x, bt.y - 7); ctx.lineTo(bt.x + 7, bt.y);
+        ctx.stroke();
+        // 4 corner brackets
+        const b = 6;
+        ctx.beginPath();
+        ctx.moveTo(bt.x - retR, bt.y - retR + b); ctx.lineTo(bt.x - retR, bt.y - retR); ctx.lineTo(bt.x - retR + b, bt.y - retR);
+        ctx.moveTo(bt.x + retR - b, bt.y - retR); ctx.lineTo(bt.x + retR, bt.y - retR); ctx.lineTo(bt.x + retR, bt.y - retR + b);
+        ctx.moveTo(bt.x - retR, bt.y + retR - b); ctx.lineTo(bt.x - retR, bt.y + retR); ctx.lineTo(bt.x - retR + b, bt.y + retR);
+        ctx.moveTo(bt.x + retR - b, bt.y + retR); ctx.lineTo(bt.x + retR, bt.y + retR); ctx.lineTo(bt.x + retR, bt.y + retR - b);
+        ctx.stroke();
+      }
+    } else if (bt.kind === 'cone') {
+      const spread = bt.spread || (Math.PI * 0.4);
+      const startAng = bt.angle - spread * 0.5;
+      const endAng = bt.angle + spread * 0.5;
+      const curRange = bt.range * progress;
+
+      // Expanding sector fill
+      ctx.fillStyle = bt.color || '#00e5ff';
+      ctx.globalAlpha = 0.14 + progress * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(bt.x, bt.y);
+      ctx.arc(bt.x, bt.y, curRange, startAng, endAng);
+      ctx.closePath();
+      ctx.fill();
+
+      // Full sector boundary
+      ctx.strokeStyle = bt.color || '#00e5ff';
+      ctx.lineWidth = 2.2;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(bt.x, bt.y);
+      ctx.arc(bt.x, bt.y, bt.range, startAng, endAng);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (bt.kind === 'line') {
+      const tx = bt.targetX != null ? bt.targetX : (bt.x + Math.cos(bt.angle || 0) * (bt.len || 200));
+      const ty = bt.targetY != null ? bt.targetY : (bt.y + Math.sin(bt.angle || 0) * (bt.len || 200));
+      const ang = Math.atan2(ty - bt.y, tx - bt.x);
+      const len = Math.hypot(tx - bt.x, ty - bt.y);
+
+      // Warning dashed vector line
+      ctx.strokeStyle = bt.color || '#ff1744';
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = 0.7 + Math.sin(time * 0.4) * 0.3;
+      ctx.setLineDash([7, 5]);
+      ctx.beginPath();
+      ctx.moveTo(bt.x, bt.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Expanding width hazard rectangle
+      const hw = (bt.w || 26) * 0.5 * progress;
+      ctx.save();
+      ctx.translate(bt.x, bt.y);
+      ctx.rotate(ang);
+      ctx.fillStyle = bt.color || '#ff1744';
+      ctx.globalAlpha = 0.14 + progress * 0.2;
+      ctx.fillRect(0, -hw, len, hw * 2);
+      ctx.restore();
+    } else if (bt.kind === 'fissure') {
+      const len = bt.len || 230;
+      const ang = bt.angle || 0;
+      ctx.save();
+      ctx.translate(bt.x, bt.y);
+      ctx.rotate(ang);
+      ctx.strokeStyle = bt.color || '#ffb74d';
+      ctx.lineWidth = 3.5;
+      ctx.globalAlpha = 0.75 + Math.sin(time * 0.35) * 0.25;
+      ctx.shadowColor = bt.color || '#ffb74d';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const steps = 8;
+      const curLen = len * progress;
+      for (let s = 1; s <= steps; s++) {
+        const sx = s * (curLen / steps);
+        const sy = (s % 2 === 0 ? 1 : -1) * (9 + (s % 3) * 4);
+        ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+    ctx.restore();
+  });
+}
+
 function drawEnemyShot(p, time) {
   const ang = p.face != null ? p.face : Math.atan2(p.vy || 0, p.vx || 0);
   if (p.kind === 'bat') {
@@ -9043,6 +9576,49 @@ function drawEnemyShot(p, time) {
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(-1, -1, 2, 2);
+    ctx.restore();
+    return;
+  }
+  if (p.kind === 'rock_boulder') {
+    const rot = p.rot || (time * 0.15);
+    ctx.save();
+    ctx.translate(Math.round(p.x), Math.round(p.y));
+    ctx.rotate(rot);
+    ctx.shadowColor = '#ffb74d';
+    ctx.shadowBlur = 8;
+    pixDisk(0, 0, p.r || 11, '#8d6e63', '#5d4037', '#3e2723');
+    ctx.strokeStyle = '#ffb74d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-6, -4); ctx.lineTo(0, 0); ctx.lineTo(6, -2);
+    ctx.moveTo(0, 0); ctx.lineTo(-2, 7);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  if (p.kind === 'mustard_fire') {
+    ctx.save();
+    ctx.shadowColor = '#fbc02d';
+    ctx.shadowBlur = 10;
+    pixDisk(p.x, p.y, p.r || 6.5, '#fff59d', '#fbc02d', '#f57f17');
+    ctx.fillStyle = '#d50000';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return;
+  }
+  if (p.kind === 'lollipop_bomb') {
+    const rot = p.rot || (time * 0.2);
+    ctx.save();
+    ctx.translate(Math.round(p.x), Math.round(p.y));
+    ctx.rotate(rot);
+    ctx.shadowColor = '#ec407a';
+    ctx.shadowBlur = 10;
+    pixDisk(0, 0, p.r || 9, '#f48fb1', '#ec407a', '#c2185b');
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 1.5);
+    ctx.stroke();
     ctx.restore();
     return;
   }
@@ -9523,12 +10099,47 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
       ctx.shadowColor = '#ff1744';
       ctx.shadowBlur = 16;
     }
-    const breath = 1 + Math.sin(time * 0.15 + (en.phase || 0)) * 0.03;
+
+    // 1. Dynamic Walking Bobbing & Heavy Titan Waddle Tilt
+    const walkTimer = en.walkTimer || (time * 0.15);
+    const walkBob = Math.abs(Math.sin(walkTimer * 2)) * 6.5;
+    const walkTilt = Math.sin(walkTimer) * 0.08;
     const facingLeft = typeof player !== 'undefined' && player && player.x < x;
-    ctx.translate(x, cy);
+
+    // 2. Attack Lunge Offset
+    const lx = en.atkLungeX || 0;
+    const ly = en.atkLungeY || 0;
+
+    ctx.translate(x + lx, cy + walkBob + ly);
+    ctx.rotate(facingLeft ? -walkTilt : walkTilt);
+
+    // 3. Breath & Hit Reaction Squash
+    const breath = 1 + Math.sin(time * 0.15 + (en.phase || 0)) * 0.03;
     ctx.scale(facingLeft ? -breath : breath, breath);
+
+    // 4. Attack Charge Warning Aura Glow
+    if (en.specialCd != null && en.specialCd < 45 && en.specialCd > 0) {
+      ctx.shadowColor = '#ffd740';
+      ctx.shadowBlur = 18 + Math.sin(time * 0.6) * 10;
+    }
+
     ctx.drawImage(spr.canvas, -sprSize * 0.5, -sprSize * 0.5, sprSize, sprSize);
     ctx.restore();
+
+    // 5. Attack Slash / Shockwave Arc FX
+    if (en.atkSlashFx && en.atkSlashFx > 0) {
+      en.atkSlashFx -= (typeof dt !== 'undefined' ? dt : 1);
+      ctx.save();
+      const sAng = Math.atan2((player ? player.y : cy) - cy, (player ? player.x : x) - x);
+      ctx.strokeStyle = en.atkSlashCol || '#ffffff';
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = en.atkSlashCol || '#ffffff';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(x + lx, cy + ly, r * 1.65, sAng - 0.75, sAng + 0.75);
+      ctx.stroke();
+      ctx.restore();
+    }
   } else if (bk === 'lava') {
     // 1. Lav Lordu İfrit (Molten Hell Behemoth)
     pixDisk(x, cy, r, '#3e2723', '#21110b', '#120502');
@@ -10638,12 +11249,33 @@ function render() {
   hazards.forEach(h => {
     drawGroundShadow(h.x + 3, h.y + 8, h.r * 0.95, h.r * 0.42);
     ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI*2);
-    ctx.fillStyle = visHex(h.type==='lava' ? '#c0392b' : h.type==='water' ? '#2471a3' : h.type==='storm' ? '#7d6a1a' : h.type==='ice' ? '#5dade2' : h.type==='sand' ? '#c9a66b' : h.type==='night' ? '#5b4a8a' : '#1e8449', visualMode==='ketchup' ? 'floor' : 'char');
-    ctx.globalAlpha = 0.32 + Math.sin(time*0.08)*0.05;
+    const hFill = h.type==='lava' ? '#c0392b' :
+                  h.type==='water' ? '#2471a3' :
+                  h.type==='storm' ? '#7d6a1a' :
+                  h.type==='ice' ? '#5dade2' :
+                  h.type==='sand' ? '#c9a66b' :
+                  h.type==='night' ? '#5b4a8a' :
+                  h.type==='caramel' ? '#ec407a' :
+                  h.type==='ketchup' ? '#b71c1c' :
+                  h.type==='bramble' ? '#1b5e20' : '#1e8449';
+    const hStroke = h.type==='lava' ? '#ff6b4a' :
+                    h.type==='water' ? '#5dade2' :
+                    h.type==='storm' ? '#f4d03f' :
+                    h.type==='ice' ? '#d6f4ff' :
+                    h.type==='sand' ? '#f5deb3' :
+                    h.type==='night' ? '#b39ddb' :
+                    h.type==='caramel' ? '#f48fb1' :
+                    h.type==='ketchup' ? '#ff5252' :
+                    h.type==='bramble' ? '#4caf50' : '#3ddc84';
+    ctx.fillStyle = visHex(hFill, visualMode==='ketchup' ? 'floor' : 'char');
+    ctx.globalAlpha = 0.38 + Math.sin(time*0.08)*0.05;
     ctx.fill();
-    ctx.globalAlpha = 0.55; ctx.strokeStyle = visHex(h.type==='lava' ? '#ff6b4a' : h.type==='water' ? '#5dade2' : h.type==='storm' ? '#f4d03f' : h.type==='ice' ? '#d6f4ff' : h.type==='sand' ? '#f5deb3' : h.type==='night' ? '#b39ddb' : '#3ddc84', visualMode==='ketchup' ? 'floor' : 'char');
+    ctx.globalAlpha = 0.65; ctx.strokeStyle = visHex(hStroke, visualMode==='ketchup' ? 'floor' : 'char');
     ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
   });
+
+  // Boss İmza Saldırı Zemin Telegrafları (Hades Stili Uyarı Alanları)
+  drawBossTelegraphs(ctx, time);
 
   obstacles.forEach(o => drawBlock3d(o, biome));
 
@@ -12075,7 +12707,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917f';
+const BUILD_ID = '20260917g';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {
@@ -12198,6 +12830,9 @@ window._game = {
   showSignaturePick,
   triggerReroll,
   spawnAroundPlayer,
+  spawnWave,
+  getBossTelegraphs: () => bossTelegraphs,
+  getHazards: () => hazards,
   MAP_W,
   MAP_H,
   closeReward,

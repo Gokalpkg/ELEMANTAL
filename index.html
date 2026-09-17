@@ -1655,9 +1655,83 @@ const BOSS_IMAGE_KEYS = {
   pink: 'img/boss-sugar.jpg',
   ketchup: 'img/boss-ketchup.jpg'
 };
+function generateBossWalkFrames(srcCanvas, bossKey) {
+  const w = srcCanvas.width;
+  const h = srcCanvas.height;
+  const frames = [];
+
+  for (let f = 0; f < 6; f++) {
+    const fcv = document.createElement('canvas');
+    fcv.width = w;
+    fcv.height = h;
+    const fc = fcv.getContext('2d');
+    fc.imageSmoothingEnabled = false;
+
+    if (bossKey === 'water') {
+      // Leviathan: Serpentine Sinusoidal Wave Undulation across 6 frames
+      const slices = 20;
+      const sliceH = Math.ceil(h / slices);
+      const wavePhase = (f * Math.PI * 2) / 6;
+      for (let i = 0; i < slices; i++) {
+        const sy = i * sliceH;
+        const undulation = Math.sin((i / slices) * Math.PI * 2.6 - wavePhase) * (10 * (i / slices));
+        fc.drawImage(srcCanvas, 0, sy, w, sliceH, undulation, sy, w, sliceH);
+      }
+    } else if (bossKey === 'stone') {
+      // Stone Titan: Heavy monolithic tectonic heave with grinding shoulder roll
+      const isDown = (f === 0 || f === 3);
+      const heaveY = isDown ? 3 : -2;
+      const tilt = (f === 1 || f === 2) ? -0.025 : (f === 4 || f === 5) ? 0.025 : 0;
+      const scX = isDown ? 1.03 : 0.98;
+      const scY = isDown ? 0.97 : 1.02;
+
+      fc.save();
+      fc.translate(w / 2, h / 2 + heaveY);
+      fc.rotate(tilt);
+      fc.scale(scX, scY);
+      fc.translate(-w / 2, -h / 2);
+      fc.drawImage(srcCanvas, 0, 0);
+      fc.restore();
+    } else {
+      // Bipedal & Multipedal Bosses (Lava, Forest, Ice, Storm, Sand, Night, Pink, Ketchup)
+      const isPlant = (f === 0 || f === 3);
+      const isApex = (f === 2 || f === 5);
+      const side = (f < 3) ? -1 : 1;
+
+      const bobY = isPlant ? 4 : isApex ? -4 : 0;
+      const scaleY = isPlant ? 0.94 : isApex ? 1.04 : 1.0;
+      const scaleX = isPlant ? 1.04 : isApex ? 0.97 : 1.0;
+      const tilt = isApex ? (side * 0.035) : (side * -0.012);
+
+      fc.save();
+      fc.translate(w / 2, h / 2 + bobY);
+      fc.rotate(tilt);
+      fc.scale(scaleX, scaleY);
+      fc.translate(-w / 2, -h / 2);
+
+      const splitY = Math.round(h * 0.58);
+      // Upper body
+      fc.drawImage(srcCanvas, 0, 0, w, splitY, 0, 0, w, splitY);
+
+      // Lower body (stride motion)
+      const legW = Math.round(w / 2);
+      const leftShift = (f === 0) ? 5 : (f === 1) ? 2 : (f === 2) ? -3 : (f === 3) ? -4 : (f === 4) ? -1 : 1;
+      const rightShift = (f === 3) ? 5 : (f === 4) ? 2 : (f === 5) ? -3 : (f === 0) ? -4 : (f === 1) ? -1 : 1;
+
+      fc.drawImage(srcCanvas, 0, splitY, legW, h - splitY, 0, splitY + leftShift, legW, h - splitY);
+      fc.drawImage(srcCanvas, legW, splitY, w - legW, h - splitY, legW, splitY + rightShift, w - legW, h - splitY);
+
+      fc.restore();
+    }
+
+    frames.push(fcv);
+  }
+  return frames;
+}
+
 function initBossSprites() {
   Object.keys(BOSS_IMAGE_KEYS).forEach(k => {
-    const entry = { loaded: false, canvas: null, img: null };
+    const entry = { loaded: false, canvas: null, walkFrames: [], img: null };
     BOSS_SPRITES[k] = entry;
     const img = new Image();
     img.onload = () => {
@@ -1676,9 +1750,11 @@ function initBossSprites() {
         }
         octx.putImageData(idata, 0, 0);
         entry.canvas = off;
+        entry.walkFrames = generateBossWalkFrames(off, k);
         entry.loaded = true;
       } catch (err) {
         entry.canvas = img;
+        entry.walkFrames = [img, img, img, img, img, img];
         entry.loaded = true;
       }
     };
@@ -7093,23 +7169,122 @@ function updateBossAi(en, dt, player, biome, now) {
   const moveDx = Math.cos(bAng) * spd * dt;
   const moveDy = Math.sin(bAng) * spd * dt;
   tryMove(en, moveDx, moveDy);
-  en.walkTimer = (en.walkTimer || 0) + (spd * dt * 0.16);
 
-  // Boss movement & bedrock friction FX
-  if (bk === 'stone') {
-    // Lissandra stone glacier glide: continuous bedrock grinding friction, rock sparks and sliding dust
-    if (Math.random() < 0.38) {
-      const gX = en.x + (Math.random() - 0.5) * (en.r * 1.3);
-      const gY = en.y + en.r * 0.5 + (Math.random() - 0.5) * 6;
-      burst(gX, gY, Math.random() < 0.4 ? '#ffb74d' : '#8d6e63', 2, 1.2);
+  const movedDist = Math.hypot(moveDx, moveDy);
+  const oldWalkTimer = en.walkTimer || 0;
+  en.walkTimer = oldWalkTimer + (spd * dt * 0.18);
+
+  // Initialize Boss Ground Collections
+  en.eruptingRocks = en.eruptingRocks || [];
+  en.footprints = en.footprints || [];
+
+  // Update existing erupting rock crags
+  en.eruptingRocks.forEach(rk => {
+    if (rk.currH < rk.maxH) {
+      rk.currH = Math.min(rk.maxH, rk.currH + rk.growth * dt);
+      if (Math.random() < 0.28) {
+        burst(rk.x, rk.y - rk.currH * 0.5, rk.col, 2, 1.2);
+      }
+    } else {
+      rk.life -= rk.decay * dt;
     }
-  } else {
-    // Heavy titan footstep stomp dust for bipedal bosses
-    if (Math.sin((en.walkTimer || 0) * 2) > 0.85 && (!en.lastFootstep || now - en.lastFootstep > 260)) {
-      en.lastFootstep = now;
-      const dustX = en.x + (Math.sin(en.walkTimer) > 0 ? 16 : -16);
-      const dustY = en.y + en.r * 0.52;
-      burst(dustX, dustY, '#8d6e63', 3, 1.5);
+  });
+  en.eruptingRocks = en.eruptingRocks.filter(rk => rk.life > 0);
+
+  // Update existing footprints
+  en.footprints.forEach(fp => { fp.life -= 0.016 * dt; });
+  en.footprints = en.footprints.filter(fp => fp.life > 0);
+
+  // A. STONE TITAN: Massive Jagged Bedrock Pillars Erupting out of Ground on Left & Right Flanks!
+  if (bk === 'stone' && movedDist > 0.08) {
+    en.rockSpawnDist = (en.rockSpawnDist || 0) + movedDist;
+    if (en.rockSpawnDist >= 11) {
+      en.rockSpawnDist = 0;
+      // Erupt a jagged monolith rock pair on both flanks as Titan plows forward!
+      [-1, 1].forEach(side => {
+        const sideAng = bAng + (side * Math.PI / 2) + (Math.random() - 0.5) * 0.35;
+        const flankDist = en.r * (0.85 + Math.random() * 0.45);
+        const rx = en.x + Math.cos(sideAng) * flankDist;
+        const ry = en.y + Math.sin(sideAng) * flankDist;
+        const maxH = 18 + Math.random() * 26;
+        en.eruptingRocks.push({
+          x: rx,
+          y: ry,
+          w: 14 + Math.random() * 12,
+          maxH: maxH,
+          currH: 0, // starts underground!
+          growth: 4.5 + Math.random() * 2.5,
+          rot: (Math.random() - 0.5) * 0.28,
+          life: 1.0,
+          decay: 0.022 + Math.random() * 0.012,
+          col: Math.random() < 0.5 ? '#8d6e63' : '#6d4c41',
+          lightCol: '#a1887f',
+          darkCol: '#3e2723',
+          glowRune: Math.random() < 0.45,
+          side: side
+        });
+        // Violent ground fracture dust burst
+        burst(rx, ry, '#8d6e63', 3, 1.8);
+        burst(rx, ry, '#ffb74d', 2, 1.4);
+      });
+      // Tectonic micro-rumble
+      shake = Math.max(shake, 1.6);
+    }
+  }
+
+  // B. ELEMENTAL FOOTSTEPS & STOMPS FOR ALL BOSSES (Foot plants at frame 0 and frame 3)
+  const prevFrame = Math.floor((oldWalkTimer * 1.6) % 6);
+  const currFrame = Math.floor((en.walkTimer * 1.6) % 6);
+  const isFootstep = (currFrame !== prevFrame) && (currFrame === 0 || currFrame === 3);
+
+  if (isFootstep && movedDist > 0.04) {
+    const isLeft = (currFrame === 0);
+    const footSide = isLeft ? -1 : 1;
+    const footOffset = footSide * (en.r * 0.42);
+    const footX = en.x + Math.cos(bAng + Math.PI / 2) * footOffset;
+    const footY = en.y + Math.sin(bAng + Math.PI / 2) * footOffset + en.r * 0.42;
+
+    // Ground stomp particle shockwave
+    particles.push({ x: footX, y: footY, r: 4, maxR: en.r * 0.72, life: 0.35, color: auraCol, lw: 2.5 });
+    shake = Math.max(shake, 1.4);
+
+    // Elemental Footstep FX per boss
+    if (bk === 'lava') {
+      en.footprints.push({ x: footX, y: footY, r: 14, life: 1.0, col: '#ff3d00', glow: '#ff9100', type: 'lava' });
+      burst(footX, footY, '#ff3d00', 4, 2.2);
+      burst(footX, footY, '#ffd600', 3, 1.6);
+    } else if (bk === 'forest') {
+      en.footprints.push({ x: footX, y: footY, r: 15, life: 1.0, col: '#2e7d32', glow: '#69f0ae', type: 'forest' });
+      burst(footX, footY, '#2e7d32', 4, 1.8);
+      burst(footX, footY, '#81c784', 3, 1.4);
+    } else if (bk === 'ice') {
+      en.footprints.push({ x: footX, y: footY, r: 16, life: 1.0, col: '#80d8ff', glow: '#ffffff', type: 'ice' });
+      burst(footX, footY, '#80d8ff', 5, 2.4);
+      burst(footX, footY, '#ffffff', 4, 1.8);
+    } else if (bk === 'storm') {
+      en.footprints.push({ x: footX, y: footY, r: 13, life: 0.9, col: '#ffd600', glow: '#ffffff', type: 'storm' });
+      sparks.push({ x: footX, y: footY - 8, vx: (Math.random() - 0.5) * 4, vy: -1.5, color: '#ffd600', r: 3, life: 0.3, shard: true, glow: true });
+      burst(footX, footY, '#ffd600', 4, 2.5);
+    } else if (bk === 'water') {
+      en.footprints.push({ x: footX, y: footY, r: 18, life: 0.8, col: '#00b0ff', glow: '#e0f7fa', type: 'water' });
+      burst(footX, footY, '#00b0ff', 4, 2.0);
+    } else if (bk === 'sand') {
+      en.footprints.push({ x: footX, y: footY, r: 15, life: 1.0, col: '#c67c00', glow: '#ffd54f', type: 'sand' });
+      burst(footX, footY, '#d7ccc8', 5, 2.2);
+      burst(footX, footY, '#ffd54f', 3, 1.6);
+    } else if (bk === 'night') {
+      en.footprints.push({ x: footX, y: footY, r: 14, life: 1.0, col: '#4a148c', glow: '#d500f9', type: 'night' });
+      burst(footX, footY, '#7b1fa2', 3, 1.6);
+    } else if (bk === 'pink') {
+      en.footprints.push({ x: footX, y: footY, r: 13, life: 0.9, col: '#ff4081', glow: '#ffffff', type: 'pink' });
+      burst(footX, footY, '#ff4081', 3, 1.8);
+      burst(footX, footY, '#00e5ff', 2, 1.6);
+    } else if (bk === 'ketchup') {
+      en.footprints.push({ x: footX, y: footY, r: 14, life: 0.9, col: '#c62828', glow: '#fbc02d', type: 'ketchup' });
+      burst(footX, footY, '#c62828', 4, 2.0);
+      burst(footX, footY, '#fbc02d', 2, 1.6);
+    } else {
+      burst(footX, footY, '#8d6e63', 3, 1.5);
     }
   }
 
@@ -10041,6 +10216,236 @@ function drawSlimeEnemy(ctx, x, y, r, en, time, fogged) {
   return cy;
 }
 
+// --- BOSS FOOTPRINTS & ERUPTING ROCKS RENDERING ---
+function drawEruptingRock(ctx, rk) {
+  if (!rk || rk.currH <= 0.5) return;
+
+  ctx.save();
+  const alpha = Math.min(1.0, rk.life * 2.5);
+  ctx.globalAlpha = alpha;
+
+  const h = rk.currH;
+  const halfW = rk.w * 0.5;
+
+  // Ground fracture crater shadow
+  ctx.fillStyle = 'rgba(20, 14, 10, 0.55)';
+  ctx.beginPath();
+  ctx.ellipse(rk.x, rk.y, halfW * 1.3, halfW * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fractured ground radial fissures
+  ctx.strokeStyle = '#3e2723';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(rk.x - halfW * 1.4, rk.y + 1);
+  ctx.lineTo(rk.x - halfW * 0.4, rk.y);
+  ctx.moveTo(rk.x + halfW * 0.3, rk.y);
+  ctx.lineTo(rk.x + halfW * 1.5, rk.y + 2);
+  ctx.moveTo(rk.x, rk.y - halfW * 0.3);
+  ctx.lineTo(rk.x + 2, rk.y + halfW * 0.4);
+  ctx.stroke();
+
+  // Glowing subterranean magma in fissure
+  if (rk.glowRune) {
+    ctx.strokeStyle = 'rgba(255, 183, 77, ' + (0.7 * alpha) + ')';
+    ctx.lineWidth = 2.0;
+    ctx.shadowColor = '#ff9800';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(rk.x - halfW * 0.8, rk.y);
+    ctx.lineTo(rk.x + halfW * 0.8, rk.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // 3D Faceted Erupting Jagged Rock Monolith
+  ctx.translate(rk.x, rk.y);
+  ctx.rotate(rk.rot);
+
+  // Left facet (illuminated / warm highlight)
+  ctx.fillStyle = rk.lightCol || '#a1887f';
+  ctx.beginPath();
+  ctx.moveTo(0, -h); // apex
+  ctx.lineTo(-halfW, 0); // left bottom
+  ctx.lineTo(0, -h * 0.2); // center lower crease
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#4e342e';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // Right facet (shadowed / darker tone)
+  ctx.fillStyle = rk.darkCol || '#4e342e';
+  ctx.beginPath();
+  ctx.moveTo(0, -h); // apex
+  ctx.lineTo(0, -h * 0.2); // center lower crease
+  ctx.lineTo(halfW, 0); // right bottom
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Center faceted ridge / granite texture
+  ctx.fillStyle = rk.col || '#6d4c41';
+  ctx.beginPath();
+  ctx.moveTo(0, -h);
+  ctx.lineTo(-halfW * 0.35, -h * 0.6);
+  ctx.lineTo(0, -h * 0.2);
+  ctx.lineTo(halfW * 0.35, -h * 0.6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ancient glowing tectonic rune carving on the rock face
+  if (rk.glowRune && h > 12) {
+    ctx.save();
+    ctx.strokeStyle = '#ffb74d';
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = '#ff9800';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    const ry = -h * 0.55;
+    ctx.moveTo(-4, ry - 5);
+    ctx.lineTo(0, ry - 8);
+    ctx.lineTo(4, ry - 5);
+    ctx.lineTo(0, ry);
+    ctx.lineTo(-4, ry - 5);
+    ctx.moveTo(0, ry - 8);
+    ctx.lineTo(0, ry + 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawBossFootprints(ctx, en) {
+  if (!en || !en.footprints) return;
+  for (let i = 0; i < en.footprints.length; i++) {
+    const fp = en.footprints[i];
+    if (fp.life <= 0) continue;
+
+    ctx.save();
+    const a = Math.min(1.0, fp.life * 1.5);
+    ctx.globalAlpha = a;
+
+    if (fp.type === 'lava') {
+      // Scorched molten magma footprint
+      const g = ctx.createRadialGradient(fp.x, fp.y, 2, fp.x, fp.y, fp.r);
+      g.addColorStop(0, '#ffff00');
+      g.addColorStop(0.35, '#ff5722');
+      g.addColorStop(0.8, '#d84315');
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r, fp.r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Charred crust cracks
+      ctx.strokeStyle = '#21110b';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(fp.x - fp.r * 0.6, fp.y - 2);
+      ctx.lineTo(fp.x + fp.r * 0.5, fp.y + 2);
+      ctx.moveTo(fp.x - 2, fp.y - fp.r * 0.3);
+      ctx.lineTo(fp.x + 2, fp.y + fp.r * 0.3);
+      ctx.stroke();
+    } else if (fp.type === 'forest') {
+      // Sprouting verdant moss and blooming clover
+      ctx.fillStyle = 'rgba(46, 125, 50, ' + (0.7 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r, fp.r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#69f0ae';
+      for (let p = -1; p <= 1; p += 2) {
+        ctx.beginPath();
+        ctx.arc(fp.x + p * (fp.r * 0.45), fp.y + (p * 2), 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ffeb3b';
+      ctx.fillRect(fp.x - 1, fp.y - 1, 2, 2);
+    } else if (fp.type === 'ice') {
+      // Permafrost shattered ice crystals
+      ctx.fillStyle = 'rgba(128, 216, 255, ' + (0.55 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r, fp.r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(fp.x - fp.r * 0.7, fp.y);
+      ctx.lineTo(fp.x + fp.r * 0.7, fp.y);
+      ctx.moveTo(fp.x, fp.y - fp.r * 0.35);
+      ctx.lineTo(fp.x, fp.y + fp.r * 0.35);
+      ctx.moveTo(fp.x - fp.r * 0.4, fp.y - fp.r * 0.25);
+      ctx.lineTo(fp.x + fp.r * 0.4, fp.y + fp.r * 0.25);
+      ctx.stroke();
+    } else if (fp.type === 'storm') {
+      // Fulgurite electric burn with static rings
+      ctx.strokeStyle = 'rgba(255, 214, 0, ' + (0.75 * a) + ')';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.8, fp.r * 0.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(fp.x - 1.5, fp.y - 1.5, 3, 3);
+    } else if (fp.type === 'water') {
+      // Expanding aquatic puddle ripple
+      ctx.strokeStyle = 'rgba(0, 176, 255, ' + (0.65 * a) + ')';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.45, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(224, 247, 250, ' + (0.4 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.6, fp.r * 0.28, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (fp.type === 'sand') {
+      // Deep desert sand indentation & berm
+      ctx.fillStyle = 'rgba(120, 80, 40, ' + (0.5 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.9, fp.r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd54f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(fp.x, fp.y - 1, fp.r * 0.7, 0, Math.PI);
+      ctx.stroke();
+    } else if (fp.type === 'night') {
+      // Void abyss pool with shadow smoke
+      ctx.fillStyle = 'rgba(74, 20, 140, ' + (0.6 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#d500f9';
+      ctx.fillRect(fp.x - 1, fp.y - 1, 2, 2);
+    } else if (fp.type === 'pink') {
+      // Sweet sugar sprinkle stomp
+      ctx.fillStyle = 'rgba(255, 64, 129, ' + (0.5 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.85, fp.r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillRect(fp.x - 4, fp.y - 1, 2.5, 2.5);
+      ctx.fillStyle = '#ffea00';
+      ctx.fillRect(fp.x + 3, fp.y + 1, 2.5, 2.5);
+    } else if (fp.type === 'ketchup') {
+      // Savory gourmet sauce splatter
+      ctx.fillStyle = 'rgba(198, 40, 40, ' + (0.75 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + (0.5 * a) + ')';
+      ctx.fillRect(fp.x - 2, fp.y - 2, 2, 2);
+    } else {
+      // Bedrock fractured stone stomp
+      ctx.fillStyle = 'rgba(60, 45, 35, ' + (0.5 * a) + ')';
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y, fp.r * 0.9, fp.r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 // 6. Biome Boss Behemoth Dispatcher & Specialized Boss Renderers
 function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
   const bk = (en && en.bossType) || (biome && biome.key) || 'stone';
@@ -10060,9 +10465,31 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
     return y;
   }
 
-  const lift = 6 + r * 0.18 + Math.abs(Math.sin(time * 0.2 + (en.phase || 0))) * 2.8;
+  // Boss Grounding: Grounded terrestrial bosses (Stone Titan, Lava, Ice, etc.) sit firmly on the ground without floating!
+  const isGrounded = (bk !== 'water');
+  const isStone = (bk === 'stone');
+  const lift = isGrounded ? 0 : (4 + Math.sin(time * 0.2 + (en.phase || 0)) * 2.5);
   const cy = y - lift;
-  drawGroundShadow(x + 2, y + r * 0.58, r * 1.25, r * 0.35);
+
+  // Ground Shadow: firmly placed right beneath the grounded boss
+  if (isStone) {
+    drawGroundShadow(x, y + r * 0.42, r * 1.5, r * 0.44);
+  } else {
+    drawGroundShadow(x + 2, y + r * 0.45, r * 1.25, r * 0.35);
+  }
+
+  // Draw Elemental Footprints on ground before boss is rendered
+  if (en && en.footprints && en.footprints.length > 0) {
+    drawBossFootprints(ctx, en);
+  }
+
+  // For Stone Titan, draw back erupting rocks emerging out of ground
+  if (isStone && en && en.eruptingRocks && en.eruptingRocks.length > 0) {
+    for (let i = 0; i < en.eruptingRocks.length; i++) {
+      const rk = en.eruptingRocks[i];
+      if (rk.y <= y) drawEruptingRock(ctx, rk);
+    }
+  }
 
   if (fogged) {
     pixDisk(x, cy, r, '#102218', '#102218', '#0a140f');
@@ -10075,13 +10502,13 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
   ctx.save();
   const auraCol = isRaged ? '#ff1744' : (biome && biome.accent) || '#ffd740';
   const auraPulse = 1 + Math.sin(time * 0.2) * 0.12;
-  const bG = ctx.createRadialGradient(x, y + r * 0.4, r * 0.5, x, y + r * 0.4, (r * 1.5) * auraPulse);
+  const bG = ctx.createRadialGradient(x, y + r * 0.35, r * 0.4, x, y + r * 0.35, (r * 1.55) * auraPulse);
   bG.addColorStop(0, auraCol + '40');
   bG.addColorStop(0.7, auraCol + '15');
   bG.addColorStop(1, 'transparent');
   ctx.fillStyle = bG;
   ctx.beginPath();
-  ctx.ellipse(x, y + r * 0.4, (r * 1.5) * auraPulse, (r * 0.7) * auraPulse, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y + r * 0.35, (r * 1.55) * auraPulse, (r * 0.65) * auraPulse, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -10104,41 +10531,69 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
       ctx.shadowBlur = 16;
     }
 
-    // 1. Dynamic Movement Animation (Lissandra Gliding for Stone Titan, Heavy Waddle for others)
-    const isStoneLissandra = (bk === 'stone');
+    // 1. Dynamic Movement Animation (6-Phase Walk Cycle)
     const walkTimer = en.walkTimer || (time * 0.15);
     const facingLeft = typeof player !== 'undefined' && player && player.x < x;
 
-    // Stone Titan glides smoothly over bedrock like Lissandra with floating hum & forward prow tilt
-    const walkBob = isStoneLissandra
-      ? Math.sin(time * 0.12) * 2.5
-      : Math.abs(Math.sin(walkTimer * 2)) * 6.5;
-    const walkTilt = isStoneLissandra
-      ? (facingLeft ? -0.045 : 0.045) + Math.sin(time * 0.08) * 0.015
-      : (facingLeft ? -Math.sin(walkTimer) * 0.08 : Math.sin(walkTimer) * 0.08);
+    // Pick animated 6-phase walk frame from spr.walkFrames
+    const frameIdx = Math.floor(Math.abs(walkTimer * 1.6)) % 6;
+    const currentFrameCanvas = (spr.walkFrames && spr.walkFrames.length === 6)
+      ? spr.walkFrames[frameIdx]
+      : spr.canvas;
 
-    // Bedrock sliding wake under Lissandra stone monolith
-    if (isStoneLissandra) {
+    let walkBob = 0;
+    let walkTilt = 0;
+
+    if (isStone) {
+      // Stone Titan: Heavy monolithic tectonic heave anchored directly to bedrock
+      walkBob = Math.sin(walkTimer * 1.4) * 1.8;
+      walkTilt = (facingLeft ? -0.035 : 0.035) + Math.sin(walkTimer * 0.9) * 0.012;
+    } else if (bk === 'water') {
+      // Leviathan serpentine undulation
+      walkBob = Math.sin(time * 0.2) * 3.5;
+      walkTilt = Math.sin(time * 0.15) * 0.04;
+    } else {
+      // Bipedal bosses: foot plant bounce & weight transfer
+      const isPlant = (frameIdx === 0 || frameIdx === 3);
+      walkBob = isPlant ? 2.5 : -2.5;
+      walkTilt = (facingLeft ? -1 : 1) * ((frameIdx % 2 === 0) ? -0.04 : 0.04);
+    }
+
+    // Stone Titan: Bedrock plowing wake under sliding base (Lissandra style)
+    if (isStone) {
       ctx.save();
       const wakeDir = facingLeft ? 1 : -1;
-      const wakeG = ctx.createRadialGradient(x, cy + r * 0.48, r * 0.2, x, cy + r * 0.48, r * 1.55);
-      wakeG.addColorStop(0, 'rgba(255, 183, 77, 0.45)');
-      wakeG.addColorStop(0.55, 'rgba(141, 110, 99, 0.35)');
+      // Subterranean glowing tectonic crust rupture
+      const wakeG = ctx.createRadialGradient(x, y + r * 0.35, r * 0.15, x, y + r * 0.35, r * 1.6);
+      wakeG.addColorStop(0, 'rgba(255, 183, 77, 0.5)');
+      wakeG.addColorStop(0.5, 'rgba(109, 76, 65, 0.45)');
       wakeG.addColorStop(1, 'transparent');
       ctx.fillStyle = wakeG;
       ctx.beginPath();
-      ctx.ellipse(x, cy + r * 0.48, r * 1.55, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y + r * 0.35, r * 1.6, r * 0.48, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Magma/fissure streak lines beneath sliding base
-      ctx.strokeStyle = 'rgba(255, 183, 77, 0.6)';
-      ctx.lineWidth = 2.5;
+      // Fractured jagged rock plates forming the emerging plinth base
+      ctx.fillStyle = '#4e342e';
       ctx.beginPath();
-      ctx.moveTo(x - wakeDir * r * 0.85, cy + r * 0.5);
-      ctx.lineTo(x + wakeDir * r * 0.35, cy + r * 0.5);
-      ctx.moveTo(x - wakeDir * r * 0.65, cy + r * 0.44);
-      ctx.lineTo(x + wakeDir * r * 0.6, cy + r * 0.44);
+      ctx.ellipse(x, y + r * 0.38, r * 1.15, r * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#271711';
+      ctx.lineWidth = 2.2;
       ctx.stroke();
+
+      // Glowing fissure lines cutting through the bedrock
+      ctx.strokeStyle = '#ffb74d';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = '#ff9800';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(x - wakeDir * r * 0.9, y + r * 0.38);
+      ctx.lineTo(x + wakeDir * r * 0.4, y + r * 0.4);
+      ctx.moveTo(x - wakeDir * r * 0.5, y + r * 0.32);
+      ctx.lineTo(x + wakeDir * r * 0.8, y + r * 0.35);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -10159,8 +10614,42 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
       ctx.shadowBlur = 18 + Math.sin(time * 0.6) * 10;
     }
 
-    ctx.drawImage(spr.canvas, -sprSize * 0.5, -sprSize * 0.5, sprSize, sprSize);
+    ctx.drawImage(currentFrameCanvas, -sprSize * 0.5, -sprSize * 0.5, sprSize, sprSize);
     ctx.restore();
+
+    // Stone Titan: Front emerging bedrock crags and front erupting monoliths
+    if (isStone) {
+      ctx.save();
+      // Rugged granite chunks pinning the base into the ground
+      ctx.fillStyle = '#5d4037';
+      ctx.strokeStyle = '#271711';
+      ctx.lineWidth = 1.5;
+      // Left anchor crag
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.85, y + r * 0.42);
+      ctx.lineTo(x - r * 0.6, y + r * 0.15);
+      ctx.lineTo(x - r * 0.35, y + r * 0.44);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Right anchor crag
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.35, y + r * 0.44);
+      ctx.lineTo(x + r * 0.65, y + r * 0.18);
+      ctx.lineTo(x + r * 0.88, y + r * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Front erupting rocks (in front of boss sprite)
+      if (en && en.eruptingRocks && en.eruptingRocks.length > 0) {
+        for (let i = 0; i < en.eruptingRocks.length; i++) {
+          const rk = en.eruptingRocks[i];
+          if (rk.y > y) drawEruptingRock(ctx, rk);
+        }
+      }
+      ctx.restore();
+    }
 
     // 5. Attack Slash / Shockwave Arc FX
     if (en.atkSlashFx && en.atkSlashFx > 0) {
@@ -13431,7 +13920,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260918c';
+const BUILD_ID = '20260918d';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

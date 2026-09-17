@@ -3300,13 +3300,26 @@ function beginWaveQuest() {
     waveQuest = { kind:'bossFast', text:'Boss’u 15 sn’de kes', t0: performance.now(), need: 15000, rewardC: 14, rewardCard: true };
   } else if (wave >= 2 && wave % 3 === 0) {
     waveQuest = { kind:'nohit', text:'Bu dalgayı hasarsız geç', rewardC: 10, rewardCard: false };
-  } else if (wave >= 3 && elCount('water')) {
-    waveQuest = { kind:'elKill', el:'water', need: 8, n: 0, text:'Su ile 8 düşman kes', rewardC: 12, rewardCard: false };
+  } else if (wave >= 3 && autoRoots().length) {
+    const roots = autoRoots();
+    const targetEl = roots[Math.floor(Math.random() * roots.length)];
+    const elName = ELEMENTS[targetEl] ? ELEMENTS[targetEl].name : 'Element';
+    waveQuest = { kind:'elKill', el: targetEl, need: 8, n: 0, text: elName + ' ile 8 düşman kes', rewardC: 12, rewardCard: false };
   } else if (wave >= 2) {
     waveQuest = { kind:'kills', need: Math.min(8, 4 + Math.floor(wave / 2)), n: 0, text:'Dalgada ' + Math.min(8, 4 + Math.floor(wave / 2)) + ' düşman kes', rewardC: 8, rewardCard: false };
   } else {
     waveQuest = null;
   }
+  updateQuestHud();
+}
+
+function updateAdaptiveQuest(elKey) {
+  if (!runQuest || runQuest.done) return;
+  const el = ELEMENTS[elKey];
+  const name = el ? el.name : 'Element';
+  runQuest.kind = 'elementKills';
+  runQuest.el = elKey;
+  runQuest.text = name + ' ile 50 düşman kes';
   updateQuestHud();
 }
 function grantQuest(q) {
@@ -3591,7 +3604,18 @@ function emptyState() {
   biomeHist = ['stone'];
   streakOn = false; lastHurtAt = 0; wagerHard = false; xpWaveMul = 1; slowUntil = 0;
   hitStopUntil = 0; dodgeUntil = 0; lastDodgeAt = 0; perfectUntil = 0;
-  waveQuest = null; runQuest = { kind:'waterKills', text:'Su ile 50 düşman kes', need:50, n:0, rewardC: 22, rewardCard: true };
+  waveQuest = null;
+  const curRoot = runLock && runLock.root;
+  const rName = (curRoot && ELEMENTS[curRoot]) ? ELEMENTS[curRoot].name : null;
+  runQuest = {
+    kind: 'elementKills',
+    el: curRoot || 'any',
+    text: rName ? (rName + ' ile 50 düşman kes') : '50 düşman kes',
+    need: 50,
+    n: 0,
+    rewardC: 22,
+    rewardCard: true
+  };
   runCrystals = 0; waveHurt = false;
   elemFatigue = { fire:0, water:0, earth:0, nature:0, storm:0 };
   lastElemUsed = null; lastSplit = null; splitFlow = 1;   lastUsedEls = [];
@@ -7789,10 +7813,20 @@ function killEnemy(idx) {
       if (waveQuest.n >= waveQuest.need) grantQuest(waveQuest);
     }
   }
-  if (runQuest && runQuest.kind === 'waterKills' && autoRoots().indexOf('water') >= 0) {
-    runQuest.n = (runQuest.n || 0) + 1;
-    updateQuestHud();
-    if (runQuest.n >= runQuest.need) grantQuest(runQuest);
+  if (runQuest && !runQuest.done) {
+    let match = false;
+    if (runQuest.kind === 'elementKills') {
+      if (!runQuest.el || runQuest.el === 'any' || autoRoots().indexOf(runQuest.el) >= 0 || (runLock && runLock.root === runQuest.el)) {
+        match = true;
+      }
+    } else if (runQuest.kind === 'waterKills' && autoRoots().indexOf('water') >= 0) {
+      match = true;
+    }
+    if (match) {
+      runQuest.n = (runQuest.n || 0) + 1;
+      updateQuestHud();
+      if (runQuest.n >= runQuest.need) grantQuest(runQuest);
+    }
   }
   if (en.type === 'boss') {
     gainCrystals(8 + Math.floor(wave / 2), en.x, en.y - 18);
@@ -11225,6 +11259,7 @@ function pickFork(kind) {
   const root = runLock.root || pendingElement;
   if (!root) { closeReward(); return; }
   runLock.root = root;
+  updateAdaptiveQuest(root);
   if (kind === 'pure') {
     runLock.secondary = null;
     runLock.forkDone = true;
@@ -11373,7 +11408,8 @@ function pickElement(k) {
   if (!runLock.root && !runLock.pickingSecondary) {
     runLock.root = k;
     pendingElement = k;
-    spawnFloatText(player.x, player.y - 28, ELEMENTS[k].name + ' koku', ELEMENTS[k].color);
+    updateAdaptiveQuest(k);
+    spawnFloatText(player.x, player.y - 28, ELEMENTS[k].name + ' kökü', ELEMENTS[k].color);
     playSfx('tick', 0.4);
     refreshSkillUI(true);
     closeReward();
@@ -11887,7 +11923,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917c';
+const BUILD_ID = '20260917d';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

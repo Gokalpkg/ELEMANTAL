@@ -384,6 +384,20 @@
     0% { transform: scale(1); filter: brightness(1); }
     100% { transform: scale(1.08); filter: brightness(1.25); }
   }
+  #dashFab {
+    position: absolute; right: 14px; bottom: 156px; z-index: 8;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #0f121b; border: 2px solid #a855f7;
+    color: #d8b4fe; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    transition: transform 0.12s, opacity 0.2s, border-color 0.2s;
+  }
+  #dashFab:active { transform: scale(0.92); }
+  #dashFab.cooldown { opacity: 0.45; border-color: #4b5563; }
+  .dash-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .dash-icon { font-size: 20px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+  .dash-txt { font-size: 8px; font-weight: 900; letter-spacing: 0.5px; color: #d8b4fe; margin-top: 2px; }
   #skillBar {
     position:absolute; left:8px; right:8px; bottom:12px; z-index:6;
     display:flex; justify-content:center; gap:10px; pointer-events:none;
@@ -848,6 +862,8 @@
   width: 50px;
   height: 50px;
   object-fit: contain;
+  mix-blend-mode: screen;
+  border-radius: 8px;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
 .card-combo-icons {
@@ -1276,6 +1292,12 @@ body.in-menu #bossHud {
         <span class="ult-txt">NİHAİ</span>
       </div>
     </button>
+    <button type="button" id="dashFab" aria-label="Kaçın / Dash" style="display:none;">
+      <div class="dash-inner">
+        <span class="dash-icon">💨</span>
+        <span class="dash-txt">DASH</span>
+      </div>
+    </button>
     <div id="skillBar"></div>
 
     <div id="startOverlay" class="overlay show">
@@ -1613,13 +1635,20 @@ const LOOK_TRAILS = [
   { id:'spark', name:'Kıvılcım' },
   { id:'neon', name:'Neon iz', unlockAt:10 }
 ];
-function defaultLook() { return { skin:'azure', flag:'tr', trail:'spark' }; }
+function defaultLook() { return { skin:'azure', flag:'none', trail:'spark' }; }
 function loadLook() {
   try {
     const raw = localStorage.getItem('elementer-look');
     if (!raw) return defaultLook();
     const o = JSON.parse(raw);
-    if (o && typeof o === 'object') return Object.assign(defaultLook(), o);
+    if (o && typeof o === 'object') {
+      const res = Object.assign(defaultLook(), o);
+      // Flag is strictly optional: if user never explicitly selected a flag in menu, default to none
+      if (!localStorage.getItem('elementer-flag-chosen')) {
+        res.flag = 'none';
+      }
+      return res;
+    }
   } catch (e) {}
   return defaultLook();
 }
@@ -5725,6 +5754,7 @@ function pruneDeadEnemies() {
 }
 
 function syncUltFab() {
+  syncDashFab();
   if (!ultFab) return;
   if (!running || menuOpen || paused || (typeof overlayBusy === 'function' && overlayBusy())) {
     ultFab.style.display = 'none';
@@ -5738,6 +5768,44 @@ function syncUltFab() {
     const pct = Math.min(100, (ultEnergy / MAX_ULT_ENERGY) * 100);
     ring.style.background = `conic-gradient(#ffd700 ${pct}%, rgba(255,255,255,0.08) ${pct}%)`;
   }
+}
+
+const dashFab = document.getElementById('dashFab');
+function syncDashFab() {
+  if (!dashFab) return;
+  if (!running || menuOpen || paused || (typeof overlayBusy === 'function' && overlayBusy())) {
+    dashFab.style.display = 'none';
+    return;
+  }
+  dashFab.style.display = 'flex';
+  const onCd = player && player.dashCd > 0;
+  dashFab.classList.toggle('cooldown', onCd);
+}
+
+function triggerDash() {
+  if (!running || paused || menuOpen || !player || player.hp <= 0) return;
+  if (player.dashCd && player.dashCd > 0) return;
+  player.dashTime = 220;
+  player.dashCd = 1600;
+  let dx = joyVec.x;
+  let dy = joyVec.y;
+  let mag = Math.hypot(dx, dy);
+  if (mag > 0.1) {
+    player.dashDirX = dx / mag;
+    player.dashDirY = dy / mag;
+  } else {
+    player.dashDirX = Math.cos(player.facing);
+    player.dashDirY = Math.sin(player.facing);
+  }
+  player.invuln = Math.max(player.invuln, 16);
+  triggerHitStop(25);
+  shake = Math.max(shake, 4);
+  vibrate([25]);
+  playSfx('skill', 0.28, 480);
+  burst(player.x, player.y, '#c084fc', 14, 3);
+  particles.push({ x: player.x, y: player.y, r: 8, maxR: 48, life: 0.35, color: '#c084fc', lw: 2.5 });
+  spawnFloatText(player.x, player.y - 28, 'DASH!', '#e9d5ff');
+  syncDashFab();
 }
 
 function triggerUltimate() {
@@ -6272,6 +6340,24 @@ function markHitDmg(en, dealt, el) {
 
 function update(dt, now) {
   time += dt;
+
+  // --- DASH HAREKETİ VE COOLDOWN ---
+  if (player.dashTime > 0) {
+    player.dashTime -= dt * 16.67;
+    player.invuln = Math.max(player.invuln, 8);
+    const dSpd = player.speed * 3.8;
+    tryMove(player, (player.dashDirX || 0) * dSpd * dt, (player.dashDirY || 0) * dSpd * dt);
+    if (Math.random() < 0.6) {
+      particles.push({
+        x: player.x, y: player.y, r: 10, maxR: 18,
+        life: 0.28, color: '#c084fc'
+      });
+    }
+  }
+  if (player.dashCd > 0) {
+    player.dashCd -= dt * 16.67;
+    if (player.dashCd <= 0) syncDashFab();
+  }
   const speedFactor = Math.hypot(joyVec.x, joyVec.y);
   const moving = speedFactor > 0.12;
   if (wasMoving && !moving) fireTimer = 0;
@@ -6791,8 +6877,15 @@ function updateBossAi(en, dt, player, biome, now) {
   const bk = en.bossType || (biome && biome.key) || 'stone';
   const slowed = en.slowUntil && now < en.slowUntil;
   const timeSlow = timeDodgeTimer > 0 ? 0.45 : 1.0;
-  const spd = en.speed * (slowed ? en.slowFactor : 1) * timeSlow;
-  const dist = Math.hypot(player.x - en.x, player.y - en.y) || 1;
+  let dist = Math.hypot(player.x - en.x, player.y - en.y) || 1;
+  if (dist > 720) {
+    const bAng = Math.atan2(player.y - en.y, player.x - en.x);
+    en.x = player.x - Math.cos(bAng) * 380;
+    en.y = player.y - Math.sin(bAng) * 380;
+    burst(en.x, en.y, '#ffd700', 16, 3);
+    softClamp(en);
+    dist = Math.hypot(player.x - en.x, player.y - en.y) || 1;
+  }
 
   // 1. Phase 2 / Ara Form Transition Check
   const layersGone = !en.layers || en.layers.length === 0;
@@ -7117,8 +7210,21 @@ function updateBossAi(en, dt, player, biome, now) {
       tryMove(en, Math.cos(en.wanderA) * spd * 0.32 * dt, Math.sin(en.wanderA) * spd * 0.32 * dt);
       return;
     }
-    const dx = player.x-en.x, dy = player.y-en.y;
-    const dist = Math.hypot(dx,dy) || 1;
+    let dx = player.x - en.x, dy = player.y - en.y;
+    let dist = Math.hypot(dx, dy) || 1;
+    // --- DÜŞMAN LASTİĞİ (LEASH / RUBBERBANDING) ---
+    // Düşman oyuncunun görüş alanından çok uzaklaşırsa (>540px), oyuncunun ekran kenarına (350-420px) taşınır.
+    // Oyuncu sonsuza kadar kaçamaz, düşmanlar haritada kaybolup dalgayı kilitleyemez!
+    if (dist > 540) {
+      const respawnAngle = Math.random() * Math.PI * 2;
+      const respawnDist = 350 + Math.random() * 70;
+      en.x = player.x + Math.cos(respawnAngle) * respawnDist;
+      en.y = player.y + Math.sin(respawnAngle) * respawnDist;
+      softClamp(en);
+      dx = player.x - en.x;
+      dy = player.y - en.y;
+      dist = Math.hypot(dx, dy) || 1;
+    }
     let goalX = player.x, goalY = player.y;
     if (en.type === 'shaman' && en.summoned) {
       goalX = en.x - dx; goalY = en.y - dy;
@@ -8353,6 +8459,7 @@ function fillLookUi() {
       b.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
       b.addEventListener('click', () => {
         look.flag = f.id;
+        try { localStorage.setItem('elementer-flag-chosen', '1'); } catch (e) {}
         saveLook();
         fillLookUi();
         playSfx('confirm', 0.35);
@@ -11551,6 +11658,30 @@ if (ultFab) {
     triggerUltimate();
   }, { passive: false });
 }
+if (dashFab) {
+  dashFab.addEventListener('click', triggerDash);
+  dashFab.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerDash();
+  }, { passive: false });
+}
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && running && !paused && !menuOpen) {
+    e.preventDefault();
+    triggerDash();
+  }
+});
+window.addEventListener('mousedown', (e) => {
+  if (e.button === 2 && running && !paused && !menuOpen) {
+    triggerDash();
+  }
+});
+window.addEventListener('contextmenu', (e) => {
+  if (running && !menuOpen && !paused) {
+    e.preventDefault();
+  }
+});
 document.getElementById('treeFromStartBtn').addEventListener('click', openTree);
 document.getElementById('treeCloseBtn').addEventListener('click', closeTree);
 const elTreeStart = document.getElementById('elTreeFromStartBtn');
@@ -11756,7 +11887,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917a';
+const BUILD_ID = '20260917b';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

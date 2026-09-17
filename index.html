@@ -777,6 +777,45 @@
   box-shadow: 0 0 24px rgba(245, 197, 66, 0.5), inset 0 0 20px rgba(245, 197, 66, 0.2);
 }
 
+@keyframes goldCardShimmer {
+  0% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.45), inset 0 0 12px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 32px rgba(245, 158, 11, 0.85), inset 0 0 22px rgba(245, 158, 11, 0.4); transform: translateY(-3px) scale(1.02); }
+  100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.45), inset 0 0 12px rgba(245, 158, 11, 0.2); }
+}
+@keyframes purpleCardShimmer {
+  0% { box-shadow: 0 0 14px rgba(168, 85, 247, 0.35), inset 0 0 10px rgba(168, 85, 247, 0.15); }
+  50% { box-shadow: 0 0 24px rgba(168, 85, 247, 0.65), inset 0 0 16px rgba(168, 85, 247, 0.3); }
+  100% { box-shadow: 0 0 14px rgba(168, 85, 247, 0.35), inset 0 0 10px rgba(168, 85, 247, 0.15); }
+}
+.choice-card.common {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.3), inset 0 0 10px rgba(34, 197, 94, 0.12) !important;
+}
+.choice-card.rare {
+  border-color: #a855f7 !important;
+  animation: cardIn .36s both, purpleCardShimmer 2.2s infinite ease-in-out !important;
+}
+.choice-card.legendary {
+  border-color: #fbbf24 !important;
+  background: linear-gradient(160deg, #2a2010 0%, #151008 100%) !important;
+  animation: cardIn .36s both, goldCardShimmer 2s infinite ease-in-out !important;
+}
+.card-rarity-badge {
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-rarity-badge.common { background: rgba(34, 197, 94, 0.22); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.4); }
+.card-rarity-badge.rare { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
+.card-rarity-badge.legendary { background: rgba(245, 158, 11, 0.28); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.55); text-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+
 .card-type-tag {
   font-size: 8px;
   font-weight: 900;
@@ -1753,20 +1792,20 @@ const BIOMES = [
   { key:'night', name:'Gece Harabesi', c0:'#12101c', c1:'#08060e', accent:'#9b7dff' }
 ];
 const MOD_POOL = [
-  { id:'overcharge', name:'Aşırı Yük', emoji:'⚡', desc:'+%50 atış hızı' },
-  { id:'bloodPact', name:'Kan Sözü', emoji:'🩸', desc:'+%60 hasar · can yenileme yok' },
-  { id:'multishot', name:'Çoklu Atış', emoji:'🏹', desc:'3 mermi birden' },
-  { id:'mirrorShield', name:'Ayna', emoji:'🛡️', desc:'Hasarı yansıt · 1.5s dokunulmaz' },
-  { id:'timeDodge', name:'Zaman', emoji:'⏳', desc:'Kaçışta 2s yavaşlat' },
-  { id:'vortexPull', name:'Girdap', emoji:'🌀', desc:'Düşmanları çek' },
-  { id:'chainExplode', name:'Patlama', emoji:'💥', desc:'Ölünce etrafa hasar' },
-  { id:'midas', name:'Midas', emoji:'💎', desc:'+%100 kristal · +XP' },
-  { id:'leech', name:'Sülük', emoji:'🌿', desc:'Vuruşta +3 can' },
-  { id:'sniper', name:'Nişancı', emoji:'🎯', desc:'Durunca %100 kritik' },
-  { id:'antimatter', name:'Delici', emoji:'🔮', desc:'Mermi herkesi deler' },
-  { id:'resonance', name:'Rezonans', emoji:'🌈', desc:'Element başı +%20 hasar' },
-  { id:'tesla', name:'Tesla', emoji:'⚡', desc:'Her 3.5s otomatik şok' },
-  { id:'clover', name:'Yonca', emoji:'🍀', desc:'+%30 kristal · şans' }
+  { id:'overcharge', name:'Hiper Tetik', emoji:'⚡', rarity:'rare', desc:'+%50 Saldırı Hızı ile mermileri makineli gibi yağdır!' },
+  { id:'bloodPact', name:'Kan Sözleşmesi', emoji:'🩸', rarity:'rare', desc:'+%60 Devasa Hasar artışı! Ancak can yenilenmesi durur.' },
+  { id:'multishot', name:'Üçlü Cehennem', emoji:'🏹', rarity:'legendary', desc:'Aynı anda 3 mermi birden ateşlenir, tüm ekranı tarar!' },
+  { id:'mirrorShield', name:'Ayna Kalkan', emoji:'🛡️', rarity:'legendary', desc:'Darbe aldığında hasarı geri püskürtür ve 1.5 sn dokunulmaz yapar!' },
+  { id:'timeDodge', name:'Zaman Bükücü', emoji:'⏳', rarity:'rare', desc:'Tehlikeli kaçışlarda zamanı 2 saniye yavaşlatır!' },
+  { id:'vortexPull', name:'Kozmik Girdap', emoji:'🌀', rarity:'rare', desc:'Düşmanları merkezine çekerek toplu imhaya hazırlar!' },
+  { id:'chainExplode', name:'Zincirleme İnfilak', emoji:'💥', rarity:'common', desc:'Ölen her düşman patlayarak yanındakilere şarapnel saçar!' },
+  { id:'midas', name:'Midas Dokunuşu', emoji:'💎', rarity:'legendary', desc:'Kristal ve XP kazancını 2 katına katlar!' },
+  { id:'leech', name:'Vampirik Öz', emoji:'🌿', rarity:'rare', desc:'Her başarılı isabette +3 Can emerek hayatta kal!' },
+  { id:'sniper', name:'Ölümcül Odak', emoji:'🎯', rarity:'rare', desc:'Hareketsiz durduğun anlarda tüm atışların %100 Kritik vurur!' },
+  { id:'antimatter', name:'Kozmik Delici', emoji:'🔮', rarity:'legendary', desc:'Mermilerin tüm düşman saflarını ve engelleri delip geçer!' },
+  { id:'resonance', name:'Elemental Rezonans', emoji:'🌈', rarity:'common', desc:'Sahip olduğun her aktif element için +%20 Ek Hasar!' },
+  { id:'tesla', name:'Tesla Bobini', emoji:'⚡', rarity:'rare', desc:'Her 3.5 saniyede etraftaki en yakın 3 hedefe yıldırım çarpar!' },
+  { id:'clover', name:'Uğurlu Yonca', emoji:'🍀', rarity:'common', desc:'+%30 Kristal kazancı ve şans çarpanı artışı!' }
 ];
 const SKILL_OFFER_LEVELS = [7, 13, 20];
 
@@ -1991,9 +2030,10 @@ const statusStore = {
 
 function emitReactionBurst(en, label, color, r, dmg, effects, el) {
   spawnFloatText(en.x, en.y - 22, label, color, 'big');
-  particles.push({ x: en.x, y: en.y, r: 12, maxR: r + 4, life: 1.1, color: color, lw: 4 });
-  burst(en.x, en.y, color, 16, 3.6);
-  burst(en.x, en.y, '#ffffff', 8, 2.4);
+  particles.push({ x: en.x, y: en.y, r: 12, maxR: r + 12, life: 1.2, color: color, lw: 4.5 });
+  burst(en.x, en.y, color, 18, 3.8);
+  burst(en.x, en.y, '#ffffff', 10, 2.6);
+  triggerHitStop(32);
   for (let j = enemies.length - 1; j >= 0; j--) {
     const o = enemies[j];
     if (Math.hypot(o.x - en.x, o.y - en.y) <= r + o.r) {
@@ -2002,9 +2042,9 @@ function emitReactionBurst(en, label, color, r, dmg, effects, el) {
     }
   }
   pruneDeadEnemies();
-  playSfx('explode', 0.26, 440);
-  vibrate([14, 18]);
-  shake = Math.max(shake, 6);
+  playSfx('explode', 0.28, 440);
+  vibrate([18, 24]);
+  shake = Math.max(shake, 7.5);
 }
 
 const reactionResolver = {
@@ -3397,17 +3437,40 @@ function hurtBreakable(o, dmg) {
   }
   return true;
 }
-const ENEMY_HP_MUL = 4;
-const ENEMY_DMG_MUL = 4;
+function getWaveHpMul(w) {
+  const curWave = w != null ? w : (typeof wave !== 'undefined' ? wave : 1);
+  if (curWave <= 1) return 1.0;
+  if (curWave <= 2) return 1.25;
+  if (curWave <= 3) return 1.65;
+  if (curWave <= 4) return 2.15;
+  if (curWave <= 5) return 2.75;
+  if (curWave <= 7) return 3.35;
+  return Math.min(5.2, 3.35 + (curWave - 7) * 0.42);
+}
+
+function getWaveDmgMul(w) {
+  const curWave = w != null ? w : (typeof wave !== 'undefined' ? wave : 1);
+  if (curWave <= 1) return 1.0;
+  if (curWave <= 2) return 1.25;
+  if (curWave <= 3) return 1.60;
+  if (curWave <= 4) return 2.05;
+  if (curWave <= 5) return 2.60;
+  if (curWave <= 7) return 3.10;
+  return Math.min(4.8, 3.10 + (curWave - 7) * 0.35);
+}
+
+const ENEMY_HP_MUL = 1.0;
+const ENEMY_DMG_MUL = 1.0;
 
 function makeEnemy(p, type, extra) {
   const hpBase = type==='tank'||type==='armored'||type==='bearer' ? 30 : type==='fast' ? 13 : type==='shooter' ? 16 : type==='exploder' ? 16 : type==='slime' ? 20 : type==='leech' ? 17 : type==='shaman' ? 24 : type==='boss' ? 62 : 18;
   const hpScale = wave <= 3 ? 0.92 : wave <= 6 ? 1.0 : wave <= 10 ? 1.08 : 1.16;
   let hp = Math.round((hpBase + Math.max(0, wave - 3) * 2.1) * hpScale);
+  const curHpMul = getWaveHpMul(wave);
   if (extra && extra.hp != null) {
-    hp = extra.hpFinal ? extra.hp : Math.round(extra.hp * ENEMY_HP_MUL);
+    hp = extra.hpFinal ? extra.hp : Math.round(extra.hp * curHpMul);
   } else {
-    hp = Math.round(hp * ENEMY_HP_MUL);
+    hp = Math.round(hp * curHpMul);
   }
   const r = type==='tank'?23: type==='armored'?21: type==='bearer'?22: type==='fast'?9: type==='shooter'?13: type==='exploder'?14: type==='slime'?17: type==='leech'?12: type==='shaman'?15: type==='boss'?30:14.5;
   const spd = ((type==='fast'?1.48: type==='tank'?0.54: type==='armored'?0.58: type==='bearer'?0.48: type==='shooter'?0.78: type==='exploder'?0.94: type==='slime'?0.64: type==='leech'?0.94: type==='shaman'?0.82:0.86) + Math.random()*0.1 + wave*0.008);
@@ -3677,8 +3740,9 @@ function spawnAroundPlayer(minD = 160, maxD = 240) {
 }
 
 function getBiomeBossConfig(biomeKey, wave) {
-  const hp1 = Math.round((24 + wave * 3.4) * ENEMY_HP_MUL);
-  const hp2 = Math.round((20 + wave * 2.8) * ENEMY_HP_MUL);
+  const bossHpMul = getWaveHpMul(wave);
+  const hp1 = Math.round((24 + wave * 3.4) * bossHpMul);
+  const hp2 = Math.round((20 + wave * 2.8) * bossHpMul);
   switch (biomeKey) {
     case 'stone':
       return {
@@ -4147,6 +4211,106 @@ function audioCtx() {
   return AC;
 }
 
+// --- 100% Offline Procedural Dynamic Synth Battle Soundtrack ---
+const synthBgm = {
+  step: 0,
+  nextBeatTime: 0,
+  chordIdx: 0,
+  chords: [
+    [55, 110, 164.81],
+    [65.41, 130.81, 196],
+    [73.42, 146.83, 220],
+    [82.41, 164.81, 246.94]
+  ],
+  scale: [220, 261.63, 293.66, 329.63, 392, 440, 523.25],
+  update(nowMs) {
+    if (!running || paused || menuOpen || !sfxOn || sfxVol <= 0.02) return;
+    const ctx = audioCtx();
+    if (!ctx) return;
+    const curTime = ctx.currentTime;
+    if (curTime < this.nextBeatTime - 0.04) return;
+
+    const isBoss = enemies && enemies.some(en => en.type === 'boss');
+    const isLowHp = player && player.hp > 0 && player.hp <= player.maxHp * 0.25;
+    const baseBpm = isBoss ? 134 : isLowHp ? 146 : 112;
+    const stepDur = 60 / baseBpm / 2;
+
+    if (this.nextBeatTime <= curTime) {
+      this.nextBeatTime = curTime + 0.03;
+    }
+
+    const t = this.nextBeatTime;
+    const step16 = this.step % 16;
+    const masterVol = Math.min(0.20, sfxVol * (isBoss ? 0.22 : 0.16));
+
+    // 1. Heavy Synth Sub-Kick
+    if (step16 === 0 || step16 === 8 || (isBoss && (step16 === 4 || step16 === 12 || step16 === 14)) || (isLowHp && (step16 % 4 === 0))) {
+      try {
+        const kickOsc = ctx.createOscillator();
+        const kickGain = ctx.createGain();
+        kickOsc.type = 'sine';
+        const startFreq = isLowHp ? 95 : 120;
+        kickOsc.frequency.setValueAtTime(startFreq, t);
+        kickOsc.frequency.exponentialRampToValueAtTime(32, t + 0.16);
+        kickGain.gain.setValueAtTime(masterVol * 1.4, t);
+        kickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        kickOsc.connect(kickGain);
+        kickGain.connect(ctx.destination);
+        kickOsc.start(t);
+        kickOsc.stop(t + 0.24);
+      } catch (e) {}
+    }
+
+    // 2. Dark Atmospheric Bass Drone
+    if (step16 === 0 || step16 === 8) {
+      if (step16 === 0) this.chordIdx = (this.chordIdx + 1) % this.chords.length;
+      try {
+        const chord = this.chords[this.chordIdx];
+        const bassOsc = ctx.createOscillator();
+        const bassFilt = ctx.createBiquadFilter();
+        const bassGain = ctx.createGain();
+        bassOsc.type = isBoss ? 'sawtooth' : 'triangle';
+        bassOsc.frequency.setValueAtTime(chord[0], t);
+        bassFilt.type = 'lowpass';
+        bassFilt.frequency.setValueAtTime(isBoss ? 480 : 280, t);
+        bassFilt.Q.setValueAtTime(2.2, t);
+        bassGain.gain.setValueAtTime(masterVol * 0.7, t);
+        bassGain.gain.exponentialRampToValueAtTime(0.0001, t + stepDur * 7);
+        bassOsc.connect(bassFilt);
+        bassFilt.connect(bassGain);
+        bassGain.connect(ctx.destination);
+        bassOsc.start(t);
+        bassOsc.stop(t + stepDur * 7.5);
+      } catch (e) {}
+    }
+
+    // 3. Cyber Melodic Arpeggio
+    if (step16 % 2 === 0 && !isLowHp) {
+      try {
+        const noteIdx = (step16 * 3 + this.chordIdx * 2) % this.scale.length;
+        const noteFreq = this.scale[noteIdx];
+        const arpOsc = ctx.createOscillator();
+        const arpFilt = ctx.createBiquadFilter();
+        const arpGain = ctx.createGain();
+        arpOsc.type = 'sine';
+        arpOsc.frequency.setValueAtTime(noteFreq, t);
+        arpFilt.type = 'lowpass';
+        arpFilt.frequency.setValueAtTime(isBoss ? 1600 : 900, t);
+        arpGain.gain.setValueAtTime(masterVol * 0.32, t);
+        arpGain.gain.exponentialRampToValueAtTime(0.0001, t + stepDur * 1.5);
+        arpOsc.connect(arpFilt);
+        arpFilt.connect(arpGain);
+        arpGain.connect(ctx.destination);
+        arpOsc.start(t);
+        arpOsc.stop(t + stepDur * 1.6);
+      } catch (e) {}
+    }
+
+    this.step++;
+    this.nextBeatTime = t + stepDur;
+  }
+};
+
 function synthBlip(kind) {
   const ctx = audioCtx();
   if (!ctx || !sfxOn || sfxVol <= 0.02) return;
@@ -4579,6 +4743,18 @@ function takeDamage(en, raw, el, opt) {
   } else {
     en.hp -= dealt;
     if (!opt.quiet) addPressure(0.48);
+    if (en.type === 'boss' && !en.phase2 && en.hp > 0 && en.hp <= en.maxHp * 0.5) {
+      en.phase2 = true;
+      en.raged = true;
+      en.speed *= 1.22;
+      shake = Math.max(shake, 18);
+      camKick = Math.max(camKick, 12);
+      triggerHitStop(45);
+      triggerScreenFlash('#ff1744', 0.4, 220);
+      spawnFloatText(en.x, en.y - 48, '🔥 2. FAZ: ÖFKE!', '#ff1744', 'big');
+      playSfx('explode', 0.42, 180);
+      vibrate([40, 60, 40, 80]);
+    }
   }
   if (!opt.quiet && !opt.noReact && el) {
     reactionResolver.resolve(en, el, { dealt: out });
@@ -7326,7 +7502,7 @@ function damagePlayer(dmg, opt) {
   if (!player || player.hp <= 0) return;
   if (player.invuln > 0 || shieldOn > 0) return;
   opt = opt || {};
-  if (!opt.raw) dmg = Math.max(1, Math.round(dmg * ENEMY_DMG_MUL));
+  if (!opt.raw) dmg = Math.max(1, Math.round(dmg * getWaveDmgMul(wave)));
   else dmg = Math.max(1, Math.round(dmg));
   const rk = modValue('rock');
   if (rk && rk.armor) dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.42, rk.armor * synMul('rock', 0.38)))));
@@ -10733,7 +10909,10 @@ function loop(ts) {
   lastTime = ts;
   if (slowUntil && ts < slowUntil) dt *= 0.28;
   try {
-    if (running && !paused && !menuOpen) update(dt, ts);
+    if (running && !paused && !menuOpen) {
+      update(dt, ts);
+      synthBgm.update(ts);
+    }
     // Safety watchdog: auto-progress wave or unfreeze if stuck with no overlays open
     if (running && !overlayBusy() && !menuOpen && breathLeft <= 0) {
       if (enemies.length === 0) {
@@ -10778,11 +10957,13 @@ function showModPick() {
   picks.forEach((m) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'choice-card';
-    btn.innerHTML = `<div class="card-type-tag">EKLENTİ</div>` +
-                    `<span class="emoji" style="font-size:36px;margin:6px 0;">${m.emoji}</span>` +
-                    `<span class="name" style="font-size:14.5px;color:#ffd740;margin-bottom:6px;">${m.name}</span>` +
-                    `<span class="hint" style="font-size:11.5px;line-height:1.35;font-weight:600;">${m.desc}</span>`;
+    const rar = m.rarity || 'common';
+    const rarBadge = rar === 'legendary' ? '🟡 EFSANEVİ' : rar === 'rare' ? '🟣 NADİR' : '🟢 YAYGIN';
+    btn.className = 'choice-card ' + rar;
+    btn.innerHTML = `<div class="card-rarity-badge ${rar}">${rarBadge}</div>` +
+                    `<span class="emoji" style="font-size:38px;margin:4px 0 6px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));">${m.emoji}</span>` +
+                    `<span class="name" style="font-size:15px;font-weight:900;color:${rar==='legendary'?'#fbbf24':rar==='rare'?'#d8b4fe':'#a7f3d0'};margin-bottom:6px;">${m.name}</span>` +
+                    `<span class="hint" style="font-size:12px;line-height:1.4;font-weight:600;color:#e2e8f0;">${m.desc}</span>`;
     let picked = false;
     const onPick = (e) => {
       if (e && e.cancelable) e.preventDefault();
@@ -10975,8 +11156,8 @@ function showGraftPick() {
   row.innerHTML = '';
   const take = document.createElement('button');
   take.type = 'button';
-  take.className = 'choice-card';
-  take.innerHTML = '<div class="card-type-tag">GRAFT</div><span class="name">' + g.name + '</span><span class="hint">' + g.hint + '</span>';
+  take.className = 'choice-card legendary';
+  take.innerHTML = '<div class="card-rarity-badge legendary">🟡 EFSANEVİ FÜZYON</div><span class="name" style="font-size:16px;font-weight:900;color:#fde047;">' + g.name + '</span><span class="hint" style="font-size:12px;line-height:1.4;color:#fef08a;margin-top:6px;">' + g.hint + '</span>';
   take.addEventListener('click', () => {
     runLock.graft = g;
     spawnFloatText(player.x, player.y - 40, g.name, '#ffe08a', 'big');
@@ -10984,8 +11165,8 @@ function showGraftPick() {
   });
   const skip = document.createElement('button');
   skip.type = 'button';
-  skip.className = 'choice-card';
-  skip.innerHTML = '<div class="card-type-tag">GEC</div><span class="name">Graft yok</span><span class="hint">Bu run T3 yuvasi bos kalir</span>';
+  skip.className = 'choice-card common';
+  skip.innerHTML = '<div class="card-rarity-badge common">⚪ PAS GEÇ</div><span class="name">Graft yok</span><span class="hint" style="font-size:11.5px;color:#94a3b8;">Bu run T3 yuvası boş kalır</span>';
   skip.addEventListener('click', () => {
     runLock.graft = { id: 'skipped', name: 'Yok' };
     closeReward();
@@ -11008,12 +11189,12 @@ function showLevelUp() {
   resetJoystick();
   paused = true;
   const titleEl = document.getElementById('levelUpTitle');
-  if (titleEl) titleEl.textContent = runLock.pickingSecondary ? 'Ikincil element' : (runLock.root ? '⭐ Seviye ' + player.level : 'Kok element');
+  if (titleEl) titleEl.textContent = runLock.pickingSecondary ? 'İkincil Element' : (runLock.root ? '⭐ Seviye ' + player.level : 'Kök Element');
   const hintEl = document.getElementById('levelUpHint');
   if (hintEl) {
     hintEl.textContent = runLock.pickingSecondary
-      ? 'Tek ikincil sec — kalan 4 bu run kilitli'
-      : (runLock.root ? 'Kok kilitli' : '6 kokten birini sec. Run boyunca degismez.');
+      ? 'Tek ikincil seç — kalan elementler bu run kilitlenir'
+      : (runLock.root ? 'Kök kilitli' : '6 elementten birini seç. Run boyunca kök gücün olur.');
   }
   const row = document.getElementById('choiceRow');
   if (!row) { paused = false; return; }
@@ -11026,7 +11207,10 @@ function showLevelUp() {
     const e = ELEMENTS[k];
     const div = document.createElement('button');
     div.type = 'button';
-    div.className = 'choice-card ' + k;
+    const isCombo = !!pendingElement;
+    const rar = isCombo ? 'legendary' : (runLock.pickingSecondary ? 'rare' : 'common');
+    const badgeText = isCombo ? '🟡 EFSANEVİ FÜZYON' : (runLock.pickingSecondary ? '🟣 İKİNCİL ELEMENT' : '🟢 TEMEL ELEMENT');
+    div.className = 'choice-card ' + k + ' ' + rar;
     let title = e.name;
     let hint = ELEMENT_QUICK_HINTS[k] || ('Sürekli ' + e.name + ' atışı');
     let iconHtml = '<img src="img/rune-' + k + '.png" class="card-rune-img" alt="' + e.name + '">';
@@ -11036,8 +11220,7 @@ function showLevelUp() {
       hint = kit ? ((kit.tag || '') + (kit.desc ? ' · ' + kit.desc.split(',')[0].slice(0, 42) : '')) : e.name;
       iconHtml = '<div class="card-combo-icons"><img src="img/rune-' + pendingElement + '.png" class="card-rune-img small"><span class="combo-plus">+</span><img src="img/rune-' + k + '.png" class="card-rune-img small"></div>';
     }
-    const tagText = pendingElement ? 'KOMBO YETENEK' : 'TEMEL ELEMENT';
-    div.innerHTML = '<div class="card-type-tag">' + tagText + '</div><div class="card-rune-wrap">' + iconHtml + '</div><span class="name">' + title + '</span><span class="hint">' + hint + '</span>';
+    div.innerHTML = '<div class="card-rarity-badge ' + rar + '">' + badgeText + '</div><div class="card-rune-wrap">' + iconHtml + '</div><span class="name" style="font-size:15px;font-weight:900;">' + title + '</span><span class="hint" style="font-size:12px;line-height:1.4;color:#e2e8f0;">' + hint + '</span>';
     let picked = false;
     const onSelect = (ev) => {
       if (ev && ev.cancelable) ev.preventDefault();
@@ -11573,7 +11756,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260914f';
+const BUILD_ID = '20260917a';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

@@ -734,6 +734,44 @@
   max-width: 360px;
   width: 100%;
 }
+.choice-row.grid-6 {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+  max-width: 480px !important;
+  width: 95vw !important;
+  max-height: 75vh !important;
+  overflow-y: auto !important;
+  padding: 6px 8px !important;
+  margin: 8px auto !important;
+}
+.choice-row.grid-6 .choice-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 145px !important;
+  padding: 10px 6px !important;
+  flex: none !important;
+}
+.choice-row.grid-6 .card-rune-img {
+  width: 52px !important;
+  height: 52px !important;
+  margin: 3px auto 6px !important;
+}
+@media (max-width: 420px) {
+  .choice-row.grid-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    max-width: 350px !important;
+  }
+  .choice-row.grid-6 .choice-card {
+    min-height: 135px !important;
+    padding: 8px 4px !important;
+  }
+  .choice-row.grid-6 .card-rune-img {
+    width: 46px !important;
+    height: 46px !important;
+  }
+}
 .choice-card {
   position: relative;
   background: linear-gradient(160deg, #1f2430 0%, #11141c 100%);
@@ -3505,7 +3543,15 @@ const ENEMY_HP_MUL = 1.0;
 const ENEMY_DMG_MUL = 1.0;
 
 function makeEnemy(p, type, extra) {
-  const hpBase = type==='tank'||type==='armored'||type==='bearer' ? 30 : type==='fast' ? 13 : type==='shooter' ? 16 : type==='exploder' ? 16 : type==='slime' ? 20 : type==='leech' ? 17 : type==='shaman' ? 24 : type==='boss' ? 62 : 18;
+  const hpBase = type==='tank'||type==='armored' ? 44 :
+                 type==='bearer' ? 36 :
+                 type==='fast' ? 10 :
+                 type==='shooter' ? 14 :
+                 type==='exploder' ? 13 :
+                 type==='slime' ? 22 :
+                 type==='leech' ? 16 :
+                 type==='shaman' ? 28 :
+                 type==='boss' ? 68 : 17;
   const hpScale = wave <= 3 ? 0.92 : wave <= 6 ? 1.0 : wave <= 10 ? 1.08 : 1.16;
   let hp = Math.round((hpBase + Math.max(0, wave - 3) * 2.1) * hpScale);
   const curHpMul = getWaveHpMul(wave);
@@ -3514,8 +3560,16 @@ function makeEnemy(p, type, extra) {
   } else {
     hp = Math.round(hp * curHpMul);
   }
-  const r = type==='tank'?23: type==='armored'?21: type==='bearer'?22: type==='fast'?9: type==='shooter'?13: type==='exploder'?14: type==='slime'?17: type==='leech'?12: type==='shaman'?15: type==='boss'?30:14.5;
-  const spd = ((type==='fast'?1.48: type==='tank'?0.54: type==='armored'?0.58: type==='bearer'?0.48: type==='shooter'?0.78: type==='exploder'?0.94: type==='slime'?0.64: type==='leech'?0.94: type==='shaman'?0.82:0.86) + Math.random()*0.1 + wave*0.008);
+  const r = type==='tank'?24: type==='armored'?23: type==='bearer'?22: type==='fast'?9.5: type==='shooter'?13: type==='exploder'?14: type==='slime'?17: type==='leech'?12: type==='shaman'?16: type==='boss'?32:14.5;
+  const spd = ((type==='fast'?1.85:
+                type==='tank'?0.42:
+                type==='armored'?0.46:
+                type==='bearer'?0.48:
+                type==='shooter'?0.80:
+                type==='exploder'?1.22:
+                type==='slime'?0.60:
+                type==='leech'?1.10:
+                type==='shaman'?0.72:0.86) + Math.random()*0.08 + wave*0.008);
   const en = {
     x:p.x, y:p.y, r, hp, maxHp:hp, phase: Math.random()*Math.PI*2,
     speed: spd, type, shootTimer: Math.random()*1.5, hitCooldown:0,
@@ -6901,6 +6955,7 @@ function updateBossAi(en, dt, player, biome, now) {
   const bk = en.bossType || (biome && biome.key) || 'stone';
   const slowed = en.slowUntil && now < en.slowUntil;
   const timeSlow = timeDodgeTimer > 0 ? 0.45 : 1.0;
+  const spd = en.speed * (slowed ? en.slowFactor : 1) * timeSlow;
   let dist = Math.hypot(player.x - en.x, player.y - en.y) || 1;
   if (dist > 720) {
     const bAng = Math.atan2(player.y - en.y, player.x - en.x);
@@ -7306,12 +7361,18 @@ function updateBossAi(en, dt, player, biome, now) {
       if (dist < reach) {
         en.hitCooldown -= dt;
         if (en.hitCooldown <= 0) {
-          let md = en.type==='tank'||en.type==='armored'||en.type==='bearer'?4: en.type==='leech'?4: (wave <= 6 ? 2 : wave <= 10 ? 3 : 4);
+          let md = en.type==='tank'||en.type==='armored'||en.type==='bearer' ? (wave <= 5 ? 5 : wave <= 9 ? 7 : 9) :
+                   en.type==='fast' ? (wave <= 5 ? 2 : wave <= 9 ? 3 : 4) :
+                   en.type==='exploder' ? 6 :
+                   en.type==='leech' ? 4 : (wave <= 6 ? 3 : wave <= 10 ? 4 : 5);
           setDeathReason(en.type==='boss' ? 'Boss darbesi' : (en.isElite ? 'Elit canavar' : (en.type==='fast' ? 'Hızlı düşman' : 'Yakın hasar')));
           damagePlayer(md);
           if (en.type==='slime') player.slowUntil = performance.now() + 1100;
-          if (en.type==='leech') en.hp = Math.min(en.maxHp, en.hp + 5);
-          en.hitCooldown = 58;
+          if (en.type==='leech') {
+            en.hp = Math.min(en.maxHp, en.hp + 6);
+            en.r = Math.min(22, en.r + 1.5);
+          }
+          en.hitCooldown = en.type === 'fast' ? 36 : 58;
         }
       }
     }
@@ -7730,21 +7791,32 @@ function killEnemy(idx) {
   }
   spawnFloatText(en.x, en.y-16, '+'+pts, '#ffd740');
   const isBoss = en.type === 'boss';
-  const deathCol = isBoss ? '#ffd740' : en.type === 'shooter' ? '#c39bd3' : en.type === 'tank' ? '#90caf9' : '#ff7b6b';
-  burst(en.x, en.y, deathCol, isBoss ? 32 : 18, isBoss ? 5.2 : 3.8);
+  const isTank = en.type === 'tank' || en.type === 'armored' || en.type === 'bearer';
+  const isFast = en.type === 'fast';
+  const isSlime = en.type === 'slime';
+  const isShaman = en.type === 'shaman';
+  const isShooter = en.type === 'shooter';
+  const deathCol = isBoss ? '#ffd740' :
+                   isTank ? '#8d6e63' :
+                   isFast ? '#00e5ff' :
+                   isSlime ? '#4ade80' :
+                   isShaman ? '#c084fc' :
+                   isShooter ? '#f472b6' : '#ff7b6b';
+
+  burst(en.x, en.y, deathCol, isBoss ? 32 : isTank ? 22 : 16, isBoss ? 5.2 : isFast ? 4.5 : 3.6);
   burst(en.x, en.y, '#ffffff', isBoss ? 20 : 8, isBoss ? 4.2 : 2.8);
   splatFloor(en.x, en.y, en.r * (isBoss ? 1.4 : 1.1));
-  corpses.push({ x:en.x, y:en.y, r:en.r, life:1, color: visualMode==='ketchup' ? '#7a0b10' : visualMode==='pink' ? '#8e0a3a' : en.type==='boss' ? '#7d6608' : en.type==='shooter' ? '#6c3483' : '#7b241c' });
+  corpses.push({ x:en.x, y:en.y, r:en.r, life:1, color: visualMode==='ketchup' ? '#7a0b10' : visualMode==='pink' ? '#8e0a3a' : en.type==='boss' ? '#7d6608' : isTank ? '#4e342e' : isSlime ? '#2e7d32' : isShaman ? '#4a148c' : isShooter ? '#6c3483' : '#7b241c' });
   
   // Shockwave ring on enemy death
-  particles.push({ x: en.x, y: en.y, r: 10, maxR: isBoss ? 150 : 54, life: 1.1, color: deathCol, lw: isBoss ? 6 : 3.5 });
+  particles.push({ x: en.x, y: en.y, r: 10, maxR: isBoss ? 150 : isTank ? 75 : isFast ? 60 : 50, life: 1.1, color: deathCol, lw: isBoss ? 6 : isTank ? 4.5 : 3 });
   particles.push({ x: en.x, y: en.y, r: 6, maxR: isBoss ? 90 : 36, life: 0.9, color: '#ffffff', lw: 2 });
   
-  vibrate(isBoss ? [50, 70, 50, 80] : [20, 25]);
+  vibrate(isBoss ? [50, 70, 50, 80] : isTank ? [30, 40] : [15, 20]);
   slowUntil = performance.now() + (isBoss ? 450 : 120);
-  shake = Math.max(shake, isBoss ? 22 : 9);
-  camKick = Math.max(camKick, isBoss ? 14 : 6);
-  triggerHitStop(isBoss ? 48 : 14);
+  shake = Math.max(shake, isBoss ? 22 : isTank ? 10 : 7);
+  camKick = Math.max(camKick, isBoss ? 14 : 5);
+  triggerHitStop(isBoss ? 48 : isTank ? 18 : 12);
   
   if (isBoss) {
     triggerScreenFlash('#ffd740', 0.45, 180);
@@ -7757,7 +7829,7 @@ function killEnemy(idx) {
     triggerScreenFlash('#ff6b4a', 0.25, 90);
     particles.push({ x:en.x, y:en.y, r:10, maxR:95, life:1, color:'#ff6b4a', lw: 4 });
     burst(en.x, en.y, '#ff6b4a', 20, 4.2);
-    if (Math.hypot(en.x-player.x, en.y-player.y) < 78) damagePlayer(4);
+    if (Math.hypot(en.x-player.x, en.y-player.y) < 78) damagePlayer(6);
     for (let k = 0; k < 4; k++) {
       const ma = k * (Math.PI / 2) + Math.PI / 4;
       enemyProjectiles.push({
@@ -7767,6 +7839,21 @@ function killEnemy(idx) {
         kind: 'magma', rot: 0
       });
     }
+  } else if (isSlime) {
+    playSfx('bubble', 0.38, 280);
+    burst(en.x, en.y, '#22c55e', 18, 3.2);
+    hazards.push({ x: en.x, y: en.y, r: 26, type: 'slime', until: performance.now() + 3500 });
+  } else if (isTank) {
+    playSfx('explode', 0.28, 170);
+    shake = Math.max(shake, 9);
+    burst(en.x, en.y, '#5d4037', 18, 3.8);
+    burst(en.x, en.y, '#ffd54f', 10, 2.8);
+  } else if (isFast) {
+    playSfx('skill2', 0.25, 520);
+    burst(en.x, en.y, '#facc15', 14, 4.2);
+  } else if (isShaman) {
+    playSfx('skill', 0.30, 440);
+    particles.push({ x: en.x, y: en.y, r: 8, maxR: 90, life: 1.1, color: '#c084fc', lw: 3.5 });
   } else {
     playSfx('kill', 0.24, 180 + Math.random() * 40);
   }
@@ -11240,6 +11327,7 @@ function showForkPick() {
   if (hintEl) hintEl.textContent = (rootEl ? rootEl.name : 'Kok') + ' ile Saf Yol veya tek ikincil element.';
   const row = document.getElementById('choiceRow');
   if (!row) { paused = false; return; }
+  row.className = 'choice-row';
   row.innerHTML = '';
   const cards = [
     { id: 'pure', name: 'Saf Yol', hint: (CLASS_LABEL[PURE_CLASS_MAP[root]] || 'Saf') + ' · ikinci element yaniyor', tag: 'PURE' },
@@ -11345,6 +11433,7 @@ function showLevelUp() {
   if (runLock.pickingSecondary && runLock.root) keys = keys.filter(k => k !== runLock.root);
   else if (!runLock.root) keys = Object.keys(ELEMENTS);
   else keys = shuffle(Object.keys(ELEMENTS)).slice(0, 2);
+  row.className = keys.length > 2 ? 'choice-row grid-6' : 'choice-row';
   keys.forEach(k => {
     const e = ELEMENTS[k];
     const div = document.createElement('button');
@@ -11923,7 +12012,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917d';
+const BUILD_ID = '20260917e';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {
@@ -11954,9 +12043,13 @@ function handleMobileBackButton() {
     if (running && enemies && enemies.length === 0 && !overlayBusy()) scheduleWaveClear(200);
     return true;
   }
-  // 3. Ödül/seçim ekranları hariç oyun akıyorsa duraklat
+  // 3. Ödül/seçim/nefes ekranları hariç oyun akıyorsa duraklat
   if (running && !overlayBusy()) {
     togglePause();
+    return true;
+  }
+  // 4. Oyun devam ederken herhangi bir seçim (Nefes, Seviye, Eklenti) ekranındaysa oyundan atılmasını önle
+  if (running && overlayBusy()) {
     return true;
   }
   // 4. Ana menüdeyse uygulamadan çık veya simge durumuna küçült

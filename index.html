@@ -805,24 +805,28 @@
   transform: translateY(-4px) scale(1.03);
 }
 .choice-card.fire {
-  border-color: #ff5233;
-  box-shadow: 0 0 20px rgba(255, 82, 51, 0.35), inset 0 0 16px rgba(255, 82, 51, 0.15);
+  border-color: #ff5233 !important;
+  box-shadow: 0 0 22px rgba(255, 82, 51, 0.45), inset 0 0 16px rgba(255, 82, 51, 0.2) !important;
 }
 .choice-card.water {
-  border-color: #38bdf8;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35), inset 0 0 16px rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.45), inset 0 0 16px rgba(56, 189, 248, 0.2) !important;
 }
 .choice-card.storm {
-  border-color: #facc15;
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.35), inset 0 0 16px rgba(250, 204, 21, 0.15);
+  border-color: #facc15 !important;
+  box-shadow: 0 0 22px rgba(250, 204, 21, 0.45), inset 0 0 16px rgba(250, 204, 21, 0.2) !important;
 }
 .choice-card.nature {
-  border-color: #4ade80;
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.35), inset 0 0 16px rgba(74, 222, 128, 0.15);
+  border-color: #4ade80 !important;
+  box-shadow: 0 0 22px rgba(74, 222, 128, 0.45), inset 0 0 16px rgba(74, 222, 128, 0.2) !important;
 }
 .choice-card.earth {
-  border-color: #fb923c;
-  box-shadow: 0 0 20px rgba(251, 146, 60, 0.35), inset 0 0 16px rgba(251, 146, 60, 0.15);
+  border-color: #fb923c !important;
+  box-shadow: 0 0 22px rgba(251, 146, 60, 0.45), inset 0 0 16px rgba(251, 146, 60, 0.2) !important;
+}
+.choice-card.void {
+  border-color: #c084fc !important;
+  box-shadow: 0 0 22px rgba(192, 132, 252, 0.45), inset 0 0 16px rgba(192, 132, 252, 0.2) !important;
 }
 .choice-card.sig {
   border-color: #f5c542;
@@ -839,13 +843,13 @@
   50% { box-shadow: 0 0 24px rgba(168, 85, 247, 0.65), inset 0 0 16px rgba(168, 85, 247, 0.3); }
   100% { box-shadow: 0 0 14px rgba(168, 85, 247, 0.35), inset 0 0 10px rgba(168, 85, 247, 0.15); }
 }
-.choice-card.common {
-  border-color: #22c55e !important;
-  box-shadow: 0 0 14px rgba(34, 197, 94, 0.3), inset 0 0 10px rgba(34, 197, 94, 0.12) !important;
+.choice-card.common:not(.fire):not(.water):not(.storm):not(.nature):not(.earth):not(.void) {
+  border-color: #22c55e;
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.3), inset 0 0 10px rgba(34, 197, 94, 0.12);
 }
-.choice-card.rare {
-  border-color: #a855f7 !important;
-  animation: cardIn .36s both, purpleCardShimmer 2.2s infinite ease-in-out !important;
+.choice-card.rare:not(.fire):not(.water):not(.storm):not(.nature):not(.earth):not(.void) {
+  border-color: #a855f7;
+  animation: cardIn .36s both, purpleCardShimmer 2.2s infinite ease-in-out;
 }
 .choice-card.legendary {
   border-color: #fbbf24 !important;
@@ -887,13 +891,21 @@
 .choice-card.earth .card-type-tag { background: rgba(251, 146, 60, 0.2); color: #fdba74; }
 
 .card-rune-wrap {
-  width: 54px;
-  height: 54px;
-  margin: 2px auto 6px;
+  width: 58px;
+  height: 58px;
+  margin: 3px auto 7px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 12px;
+  transition: all 0.2s ease;
 }
+.choice-card.fire .card-rune-wrap { border: 2px solid rgba(255, 82, 51, 0.85); background: rgba(255, 82, 51, 0.16); box-shadow: 0 0 14px rgba(255, 82, 51, 0.4); }
+.choice-card.water .card-rune-wrap { border: 2px solid rgba(56, 189, 248, 0.85); background: rgba(56, 189, 248, 0.16); box-shadow: 0 0 14px rgba(56, 189, 248, 0.4); }
+.choice-card.storm .card-rune-wrap { border: 2px solid rgba(250, 204, 21, 0.85); background: rgba(250, 204, 21, 0.16); box-shadow: 0 0 14px rgba(250, 204, 21, 0.4); }
+.choice-card.nature .card-rune-wrap { border: 2px solid rgba(74, 222, 128, 0.85); background: rgba(74, 222, 128, 0.16); box-shadow: 0 0 14px rgba(74, 222, 128, 0.4); }
+.choice-card.earth .card-rune-wrap { border: 2px solid rgba(251, 146, 60, 0.85); background: rgba(251, 146, 60, 0.16); box-shadow: 0 0 14px rgba(251, 146, 60, 0.4); }
+.choice-card.void .card-rune-wrap { border: 2px solid rgba(192, 132, 252, 0.85); background: rgba(192, 132, 252, 0.16); box-shadow: 0 0 14px rgba(192, 132, 252, 0.4); }
 .card-rune-img {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
@@ -5360,7 +5372,21 @@ function refreshSkillUI(force) {
     btn.classList.remove('ready','locked','empty','push','pull');
     if (!combo) {
       btn.classList.add('empty');
-      icon.textContent = pendingElement && i === lockedCombos.length ? ELEMENTS[pendingElement].emoji + '?' : '🔒';
+      const isPendingThisSlot = (pendingElement && i === lockedCombos.length);
+      if (isPendingThisSlot) {
+        const pe = ELEMENTS[pendingElement];
+        btn.style.borderColor = pe.color;
+        btn.style.boxShadow = '0 0 14px ' + pe.color + '88';
+        btn.style.background = pe.color + '22';
+        icon.textContent = pe.emoji + ' ?';
+        icon.style.color = pe.color;
+      } else {
+        btn.style.borderColor = '';
+        btn.style.boxShadow = '';
+        btn.style.background = '';
+        icon.textContent = '🔒';
+        icon.style.color = '';
+      }
       timer.textContent = '';
       if (howEl) howEl.textContent = '';
       fill.style.height = '0%';
@@ -5371,7 +5397,12 @@ function refreshSkillUI(force) {
     const sp = splitOf(combo.kind);
     if (sp === 'push') btn.classList.add('push');
     if (sp === 'pull') btn.classList.add('pull');
+    const col = combo.color || (ELEMENTS[combo.a] && ELEMENTS[combo.a].color) || '#ffd740';
+    btn.style.borderColor = col;
+    btn.style.boxShadow = '0 0 14px ' + col + '77';
+    btn.style.background = col + '20';
     icon.textContent = combo.icons;
+    icon.style.color = '';
     if (howEl) howEl.textContent = combo.tag || combo.how || '';
     const pct = Math.min(1, st.charge / combo.cd);
     fill.style.height = (pct*100) + '%';
@@ -5410,14 +5441,18 @@ function refreshSkillUI(force) {
 
 function tryUseSkill(slot) {
   if (!running || paused || menuOpen) return;
-  if (slot >= 1 && !skill2Unlocked) {
-    spawnFloatText(player.x, player.y - 28, '2. skill · Dalga 6', '#7ee8ff');
+  const combo = lockedCombos[slot];
+  const st = skillState[slot];
+  if (!combo) {
+    if (pendingElement && slot === lockedCombos.length) {
+      spawnFloatText(player.x, player.y - 28, ELEMENTS[pendingElement].name + ' füzyon bekliyor', ELEMENTS[pendingElement].color);
+    } else {
+      spawnFloatText(player.x, player.y - 28, 'Slot ' + (slot + 1) + ' kilitli', '#aaa');
+    }
     playSfx('hit', 0.2);
     return;
   }
-  const combo = lockedCombos[slot];
-  const st = skillState[slot];
-  if (!combo || !st || !st.ready) return;
+  if (!st || !st.ready) return;
   // Kesinlikle 'Menzil dışı' iptali yapma! Oyuncu butona bastığında yetenek her koşulda gümbür gümbür çalışsın.
   playSfx('skill', 0.45, 480);
   vibrate([15, 20, 15]);
@@ -8294,6 +8329,9 @@ function onWaveCleared() {
       spawnGroundOrb(player.x - 36, player.y);
       spawnFloatText(player.x, player.y - 36, 'Nefes', '#ffd740');
       playSfx('wave', 0.22);
+      if ((pickHistory ? pickHistory.length : 0) < 6) {
+        pendingRewards.push('element');
+      }
       const br = document.getElementById('breathOverlay');
       if (br) {
         br.classList.add('show');
@@ -13295,50 +13333,66 @@ function showGraftPick() {
 
 function showLevelUp() {
   lastNodePickKind = null;
-  if (runLock.root && !runLock.pickingSecondary && !runLock.forkDone) {
-    showForkPick();
-    return;
-  }
-  if (runLock.forkDone && !runLock.pickingSecondary) {
+  const picksDone = (pickHistory ? pickHistory.length : 0);
+  if (picksDone >= 6 || (lockedCombos && lockedCombos.length >= 3)) {
     closeReward();
     return;
   }
   resetJoystick();
   paused = true;
+  const pickNum = picksDone + 1;
+  const slotIdx = Math.floor(picksDone / 2) + 1;
+  const isSecondOfPair = !!pendingElement;
+
   const titleEl = document.getElementById('levelUpTitle');
-  if (titleEl) titleEl.textContent = runLock.pickingSecondary ? 'İkincil Element' : (runLock.root ? '⭐ Seviye ' + player.level : 'Kök Element');
+  if (titleEl) {
+    titleEl.textContent = isSecondOfPair
+      ? 'Füzyon Elementi (' + pickNum + '/6)'
+      : 'Element Seçimi (' + pickNum + '/6)';
+  }
   const hintEl = document.getElementById('levelUpHint');
   if (hintEl) {
-    hintEl.textContent = runLock.pickingSecondary
-      ? 'Tek ikincil seç — kalan elementler bu run kilitlenir'
-      : (runLock.root ? 'Kök kilitli' : '6 elementten birini seç. Run boyunca kök gücün olur.');
+    hintEl.textContent = isSecondOfPair
+      ? (ELEMENTS[pendingElement].name + ' ile birleşecek ikinci elementi seç (Güç ' + slotIdx + '/3).')
+      : ('Güç ' + slotIdx + ' için bir temel element seç.');
   }
+
   const row = document.getElementById('choiceRow');
   if (!row) { paused = false; return; }
   row.innerHTML = '';
-  let keys = Object.keys(ELEMENTS);
-  if (runLock.pickingSecondary && runLock.root) keys = keys.filter(k => k !== runLock.root);
-  else if (!runLock.root) keys = Object.keys(ELEMENTS);
-  else keys = shuffle(Object.keys(ELEMENTS)).slice(0, 2);
-  row.className = keys.length > 2 ? 'choice-row grid-6' : 'choice-row';
+
+  // Exactly 2 elements offered per selection
+  let allKeys = Object.keys(ELEMENTS);
+  let keys = shuffle(allKeys).slice(0, 2);
+  row.className = 'choice-row';
+
   keys.forEach(k => {
     const e = ELEMENTS[k];
     const div = document.createElement('button');
     div.type = 'button';
-    const isCombo = !!pendingElement;
-    const rar = isCombo ? 'legendary' : (runLock.pickingSecondary ? 'rare' : 'common');
-    const badgeText = isCombo ? '🟡 EFSANEVİ FÜZYON' : (runLock.pickingSecondary ? '🟣 İKİNCİL ELEMENT' : '🟢 TEMEL ELEMENT');
-    div.className = 'choice-card ' + k + ' ' + rar;
+    div.className = 'choice-card ' + k;
+    div.style.borderColor = e.color;
+    div.style.boxShadow = '0 0 22px ' + e.color + '55, inset 0 0 14px ' + e.color + '22';
+
     let title = e.name;
     let hint = ELEMENT_QUICK_HINTS[k] || ('Sürekli ' + e.name + ' atışı');
     let iconHtml = '<img src="img/rune-' + k + '.png" class="card-rune-img" alt="' + e.name + '">';
+
     if (pendingElement) {
-      const kit = COMBO_KITS[pendingElement + '_' + k];
-      title = COMBO_NAMES[pendingElement + '_' + k] || e.name;
-      hint = kit ? ((kit.tag || '') + (kit.desc ? ' · ' + kit.desc.split(',')[0].slice(0, 42) : '')) : e.name;
+      const kit = COMBO_KITS[pendingElement + '_' + k] || COMBO_KITS[k + '_' + pendingElement];
+      title = COMBO_NAMES[pendingElement + '_' + k] || COMBO_NAMES[k + '_' + pendingElement] || (ELEMENTS[pendingElement].name + ' + ' + e.name);
+      hint = kit ? ((kit.tag || '') + (kit.desc ? ' · ' + kit.desc.split(',')[0].slice(0, 44) : '')) : (e.name + ' füzyonu');
       iconHtml = '<div class="card-combo-icons"><img src="img/rune-' + pendingElement + '.png" class="card-rune-img small"><span class="combo-plus">+</span><img src="img/rune-' + k + '.png" class="card-rune-img small"></div>';
     }
-    div.innerHTML = '<div class="card-rarity-badge ' + rar + '">' + badgeText + '</div><div class="card-rune-wrap">' + iconHtml + '</div><span class="name" style="font-size:15px;font-weight:900;">' + title + '</span><span class="hint" style="font-size:12px;line-height:1.4;color:#e2e8f0;">' + hint + '</span>';
+
+    const badgeText = isSecondOfPair ? 'FÜZYON ADAYI' : 'TEMEL ELEMENT';
+    const badgeHtml = '<div class="card-rarity-badge" style="background:' + e.color + '25;color:' + e.glow + ';border:1px solid ' + e.color + '88;"><span class="elem-badge-kare" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + e.color + ';box-shadow:0 0 6px ' + e.color + ';margin-right:5px;vertical-align:middle;"></span>' + badgeText + '</div>';
+    const runeWrapHtml = '<div class="card-rune-wrap" style="border:2px solid ' + e.color + '99;background:' + e.color + '18;border-radius:12px;box-shadow:0 0 14px ' + e.color + '40;">' + iconHtml + '</div>';
+    const nameHtml = '<span class="name" style="font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:7px;"><span class="elem-name-kare" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + e.color + ';box-shadow:0 0 10px ' + e.color + ';border:1px solid rgba(255,255,255,0.6);flex-shrink:0;"></span>' + title + '</span>';
+    const hintHtml = '<span class="hint" style="font-size:12px;line-height:1.4;color:#e2e8f0;">' + hint + '</span>';
+
+    div.innerHTML = badgeHtml + runeWrapHtml + nameHtml + hintHtml;
+
     let picked = false;
     const onSelect = (ev) => {
       if (ev && ev.cancelable) ev.preventDefault();
@@ -13351,24 +13405,31 @@ function showLevelUp() {
     div.addEventListener('touchend', onSelect, { passive: false });
     row.appendChild(div);
   });
+
   document.getElementById('levelUpOverlay').classList.add('show');
   syncRerollFab();
 }
 
 function pickElement(k) {
   pickHistory.push(k);
+  if (!runLock.root) {
+    runLock.root = k;
+    updateAdaptiveQuest(k);
+  }
+  const e = ELEMENTS[k];
+
   if (pactEl && k === pactEl) {
     pactHave++;
     if (pactHave >= 2 && !pactArmed) {
       pactArmed = true;
-      spawnFloatText(player.x, player.y-48, 'Sözleşme tamam', ELEMENTS[pactEl].color);
+      spawnFloatText(player.x, player.y - 48, 'Sözleşme tamam', e.color);
     }
   }
-  const copies = pickHistory.filter(e => e === k).length;
+
+  const copies = pickHistory.filter(x => x === k).length;
   if (copies >= 3) {
     overchargeEl = k;
-    spawnFloatText(player.x, player.y-36, 'Aşırı yük ' + ELEMENTS[k].emoji, ELEMENTS[k].color);
-    // Mini nihai: aynı element 3 kez
+    spawnFloatText(player.x, player.y - 36, 'Aşırı yük ' + e.emoji, e.color);
     const R = 150;
     enemies.forEach(en => {
       if (Math.hypot(en.x - player.x, en.y - player.y) <= R + en.r) {
@@ -13376,52 +13437,36 @@ function pickElement(k) {
       }
     });
     pruneDeadEnemies();
-    burst(player.x, player.y, ELEMENTS[k].color, 22, 4);
-    particles.push({ x: player.x, y: player.y, r: 12, maxR: R, life: 1, color: ELEMENTS[k].color, lw: 4 });
+    burst(player.x, player.y, e.color, 22, 4);
+    particles.push({ x: player.x, y: player.y, r: 12, maxR: R, life: 1, color: e.color, lw: 4 });
     playSfx('skill', 0.4, 400);
     vibrate([25, 35, 25]);
   }
-  if (!runLock.root && !runLock.pickingSecondary) {
-    runLock.root = k;
-    pendingElement = k;
-    updateAdaptiveQuest(k);
-    spawnFloatText(player.x, player.y - 28, ELEMENTS[k].name + ' kökü', ELEMENTS[k].color);
-    playSfx('tick', 0.4);
-    refreshSkillUI(true);
-    closeReward();
-    return;
-  }
-  if (runLock.pickingSecondary) {
-    runLock.secondary = k;
-    runLock.forkDone = true;
-    runLock.pickingSecondary = false;
-    runLock.path = FUSION_CLASS_MAP[pairSorted(runLock.root, k)] || 'stain';
-    const combo = comboInfo(runLock.root, k);
-    lockedCombos.push(combo);
-    markComboSeen(combo.key);
-    skillState.push({ charge: combo.cd, ready: true });
-    pendingElement = null;
-    spawnFloatText(player.x, player.y - 28, CLASS_LABEL[runLock.path] || combo.name, combo.color);
-    burst(player.x, player.y, combo.color, 16, 3);
-    playSfx('confirm', 0.45);
-    applyClassForkBonuses();
-    refreshSkillUI(true);
-    closeReward();
-    return;
-  }
+
   if (pendingElement) {
     const combo = comboInfo(pendingElement, k);
     lockedCombos.push(combo);
     markComboSeen(combo.key);
     skillState.push({ charge: combo.cd, ready: true });
+
+    if (!runLock.secondary && lockedCombos.length === 1) {
+      runLock.secondary = k;
+      runLock.forkDone = true;
+      runLock.path = FUSION_CLASS_MAP[pairSorted(runLock.root, k)] || 'stain';
+      applyClassForkBonuses();
+    }
+
     pendingElement = null;
-    spawnFloatText(player.x, player.y-28, combo.name, combo.color);
-    burst(player.x, player.y, combo.color, 16, 3);
+    spawnFloatText(player.x, player.y - 28, combo.name + ' Gücü Açıldı! (' + lockedCombos.length + '/3)', combo.color);
+    burst(player.x, player.y, combo.color, 20, 3.5);
     playSfx('confirm', 0.45);
   } else {
     pendingElement = k;
+    spawnFloatText(player.x, player.y - 28, e.name + ' (' + pickHistory.length + '/6)', e.color);
+    burst(player.x, player.y, e.color, 12, 2.5);
     playSfx('tick', 0.4);
   }
+
   refreshSkillUI(true);
   closeReward();
 }
@@ -13920,7 +13965,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260918d';
+const BUILD_ID = '20260918e';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

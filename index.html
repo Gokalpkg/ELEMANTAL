@@ -1642,6 +1642,53 @@ const MAX_COMBOS = 3;
 const hitFlashEl = document.getElementById('hitFlash');
 const cam = { x: 0, y: 0 };
 
+const BOSS_SPRITES = {};
+const BOSS_IMAGE_KEYS = {
+  stone: 'img/boss-stone.jpg',
+  lava: 'img/boss-lava.jpg',
+  forest: 'img/boss-forest.jpg',
+  ice: 'img/boss-ice.jpg',
+  storm: 'img/boss-storm.jpg',
+  water: 'img/boss-water.jpg',
+  sand: 'img/boss-sand.jpg',
+  night: 'img/boss-night.jpg',
+  pink: 'img/boss-sugar.jpg',
+  ketchup: 'img/boss-ketchup.jpg'
+};
+function initBossSprites() {
+  Object.keys(BOSS_IMAGE_KEYS).forEach(k => {
+    const entry = { loaded: false, canvas: null, img: null };
+    BOSS_SPRITES[k] = entry;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const off = document.createElement('canvas');
+        off.width = img.naturalWidth || img.width;
+        off.height = img.naturalHeight || img.height;
+        const octx = off.getContext('2d');
+        octx.drawImage(img, 0, 0);
+        const idata = octx.getImageData(0, 0, off.width, off.height);
+        const d = idata.data;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] < 24 && d[i+1] < 24 && d[i+2] < 24) {
+            d[i+3] = 0;
+          }
+        }
+        octx.putImageData(idata, 0, 0);
+        entry.canvas = off;
+        entry.loaded = true;
+      } catch (err) {
+        entry.canvas = img;
+        entry.loaded = true;
+      }
+    };
+    img.src = BOSS_IMAGE_KEYS[k];
+    entry.img = img;
+  });
+}
+try { initBossSprites(); } catch (_) {}
+
 const LOOK_SKINS = [
   { id:'azure', name:'Gök', hex:'#4aa3ff', neon:false },
   { id:'ember', name:'Kor', hex:'#ff5a3c', neon:false },
@@ -9416,7 +9463,7 @@ function drawSlimeEnemy(ctx, x, y, r, en, time, fogged) {
 
 // 6. Biome Boss Behemoth Dispatcher & Specialized Boss Renderers
 function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
-  const bk = (biome && biome.key) || 'stone';
+  const bk = (en && en.bossType) || (biome && biome.key) || 'stone';
 
   // If Sand Boss is burrowed under the sand
   if (en.burrowT > 0) {
@@ -9468,7 +9515,21 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
     ctx.translate(-x, -cy);
   }
 
-  if (bk === 'lava') {
+  const spr = BOSS_SPRITES[bk];
+  if (spr && spr.loaded && spr.canvas) {
+    const sprSize = r * 3.8;
+    ctx.save();
+    if (isRaged) {
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 16;
+    }
+    const breath = 1 + Math.sin(time * 0.15 + (en.phase || 0)) * 0.03;
+    const facingLeft = typeof player !== 'undefined' && player && player.x < x;
+    ctx.translate(x, cy);
+    ctx.scale(facingLeft ? -breath : breath, breath);
+    ctx.drawImage(spr.canvas, -sprSize * 0.5, -sprSize * 0.5, sprSize, sprSize);
+    ctx.restore();
+  } else if (bk === 'lava') {
     // 1. Lav Lordu İfrit (Molten Hell Behemoth)
     pixDisk(x, cy, r, '#3e2723', '#21110b', '#120502');
 
@@ -10715,22 +10776,24 @@ function render() {
     }
     if (en.flashT > 0) {
       en.flashT--;
-      ctx.save();
-      ctx.globalAlpha = 0.52;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(en.x, cy, en.r + 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      if (en.type !== 'boss') {
+        ctx.save();
+        ctx.globalAlpha = 0.52;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(en.x, cy, en.r + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
     if (en.type === 'boss' && en.layers) {
       en.layers.forEach((L, i) => {
         ctx.save();
-        ctx.globalAlpha = 0.45 + (en.peelFx || 0) * 0.35;
+        ctx.globalAlpha = 0.55 + (en.peelFx || 0) * 0.35;
         ctx.strokeStyle = visHex(L.color, 'char');
-        ctx.lineWidth = 4 - i;
+        ctx.lineWidth = Math.max(2, 4 - i);
         ctx.beginPath();
-        ctx.arc(en.x, cy, en.r + 7 + i * 5 + (en.peelFx || 0) * 6, 0, Math.PI * 2);
+        ctx.arc(en.x, cy, en.r * 1.55 + i * 7 + (en.peelFx || 0) * 6, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       });
@@ -12012,7 +12075,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917e';
+const BUILD_ID = '20260917f';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {
@@ -12111,10 +12174,11 @@ window._game = {
   drawYetiEnemy,
   drawVampireEnemy,
   drawCactusEnemy,
-  drawFlamewarEnemy,
   drawBiomeBoss,
   drawBiomeEnemy,
   drawEnemyShot,
+  BOSS_SPRITES,
+  getBiomeBossConfig,
   BUILD_ID,
   punchEnemy,
   applyEffect,

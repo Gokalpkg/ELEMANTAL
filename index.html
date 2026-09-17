@@ -1660,7 +1660,6 @@ function initBossSprites() {
     const entry = { loaded: false, canvas: null, img: null };
     BOSS_SPRITES[k] = entry;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const off = document.createElement('canvas');
@@ -1682,6 +1681,10 @@ function initBossSprites() {
         entry.canvas = img;
         entry.loaded = true;
       }
+    };
+    img.onerror = () => {
+      entry.canvas = null;
+      entry.loaded = false;
     };
     img.src = BOSS_IMAGE_KEYS[k];
     entry.img = img;
@@ -1966,8 +1969,8 @@ function autoSpeedBonus() {
   return Math.min(0.68, (a + extra + altarAs + dodgeAs + adrenalineAs + nodeAs) / 100);
 }
 function xpToNext(lv) {
-  // Daha yavaş seviye — seçim ekranı yağmuru bitsin
-  return Math.round(110 + (lv - 1) * 78 + Math.pow(Math.max(0, lv - 1), 1.92) * 36);
+  const safeLv = (typeof lv === 'number' && !isNaN(lv) && lv >= 1) ? lv : 1;
+  return Math.max(10, Math.round(110 + (safeLv - 1) * 78 + Math.pow(Math.max(0, safeLv - 1), 1.92) * 36));
 }
 
 const AUTO_X = 250;
@@ -3299,10 +3302,9 @@ function closeElTree() {
   }
 }
 function triggerHitStop(ms) {
-  const add = Math.min(70, ms || 34);
-  const next = performance.now() + add;
-  const cap = performance.now() + 110; // donma koruması
-  hitStopUntil = Math.min(cap, Math.max(hitStopUntil || 0, next));
+  const now = performance.now();
+  const dur = Math.min(60, Math.max(16, ms || 32));
+  hitStopUntil = now + dur;
 }
 function tryPerfectDodge() {
   const now = performance.now();
@@ -4352,6 +4354,7 @@ function unlockSfx() {
 }
 
 let AC = null;
+let acResuming = false;
 function audioCtx() {
   if (!AC) {
     try {
@@ -4359,8 +4362,9 @@ function audioCtx() {
       if (C) AC = new C();
     } catch (e) {}
   }
-  if (AC && AC.state === 'suspended') {
-    AC.resume().catch(() => {});
+  if (AC && AC.state === 'suspended' && !acResuming) {
+    acResuming = true;
+    AC.resume().then(() => { acResuming = false; }).catch(() => { acResuming = false; });
   }
   return AC;
 }
@@ -4380,7 +4384,7 @@ const synthBgm = {
   update(nowMs) {
     if (!running || paused || menuOpen || !sfxOn || sfxVol <= 0.02) return;
     const ctx = audioCtx();
-    if (!ctx) return;
+    if (!ctx || ctx.state !== 'running') return;
     const curTime = ctx.currentTime;
     if (curTime < this.nextBeatTime - 0.04) return;
 
@@ -8556,7 +8560,8 @@ function gainXp(n) {
   player.xp += amt;
   let leveled = false;
   let offered = false; // bir XP paketinde en fazla 1 seçim ekranı
-  while (player.xp >= player.xpNeed) {
+  let safetyLoops = 50;
+  while (player.xp >= player.xpNeed && safetyLoops-- > 0) {
     player.xp -= player.xpNeed;
     player.level++;
     player.xpNeed = xpToNext(player.level);
@@ -8578,20 +8583,9 @@ function gainXp(n) {
 function flushReward() {
   if (!pendingRewards.length) return;
   if (overlayBusy()) {
-    flushReward._fails = (flushReward._fails || 0) + 1;
-    if (flushReward._fails > 35) {
-      // Stuck overlay / reward deadlock — force clear pick overlays
-      ['levelUpOverlay','modOverlay','sigOverlay','curseOverlay','breathOverlay','kitOverlay','merchantOverlay','continueOverlay','guideOverlay','elTreeOverlay','lookOverlay','treeOverlay'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('show');
-      });
-      flushReward._fails = 0;
-      paused = false;
-    }
-    if (!flushReward._t) flushReward._t = setTimeout(() => { flushReward._t = null; flushReward(); }, 90);
+    // Seçim ekranı açıkken kullanıcıyı zorla kapatma; closeReward() seçim bitince flushReward çağırır
     return;
   }
-  flushReward._fails = 0;
   paused = true;
   const kind = pendingRewards.shift();
   try {
@@ -11863,24 +11857,34 @@ function render() {
 }
 
 function loop(ts) {
-  if (!lastTime) lastTime = ts;
-  if (hitStopUntil && ts < hitStopUntil) {
-    lastTime = ts;
-    try { render(); } catch(e) { console.error('Render error in hitstop:', e); }
-    requestAnimationFrame(loop);
-    return;
+  const now = performance.now();
+  if (!lastTime) lastTime = now;
+  if (hitStopUntil > 0) {
+    if (now < hitStopUntil) {
+      lastTime = now;
+      try { render(); } catch(e) { console.error('Render error in hitstop:', e); }
+      requestAnimationFrame(loop);
+      return;
+    }
+    hitStopUntil = 0;
   }
-  let dt = Math.min(2, (ts-lastTime)/16.67);
-  lastTime = ts;
-  if (slowUntil && ts < slowUntil) dt *= 0.28;
+  let dt = Math.min(2, (now - lastTime) / 16.67);
+  lastTime = now;
+  if (slowUntil > 0) {
+    if (now < slowUntil) {
+      dt *= 0.28;
+    } else {
+      slowUntil = 0;
+    }
+  }
   try {
     if (running && !paused && !menuOpen) {
-      update(dt, ts);
-      synthBgm.update(ts);
+      update(dt, now);
+      synthBgm.update(now);
     }
     // Safety watchdog: auto-progress wave or unfreeze if stuck with no overlays open
     if (running && !overlayBusy() && !menuOpen && breathLeft <= 0) {
-      if (enemies.length === 0) {
+      if (enemies && enemies.length === 0) {
         if (!waveTimer) scheduleWaveClear(280);
       } else if (paused && !pendingRewards.length) {
         paused = false;
@@ -11888,8 +11892,8 @@ function loop(ts) {
     }
     // Hard unstick: paused with no visible overlay for >1s
     if (running && paused && !menuOpen && !overlayBusy() && !(pendingRewards && pendingRewards.length)) {
-      loop._stuckAt = loop._stuckAt || ts;
-      if (ts - loop._stuckAt > 1000) {
+      loop._stuckAt = loop._stuckAt || now;
+      if (now - loop._stuckAt > 1000) {
         paused = false;
         loop._stuckAt = 0;
         if (enemies && enemies.length === 0) scheduleWaveClear(120);
@@ -12564,9 +12568,16 @@ document.getElementById('lookFromPauseBtn').addEventListener('click', () => {
   document.getElementById('pauseOverlay').classList.remove('show');
   openLook('pause');
 });
-document.getElementById('lookCloseBtn').addEventListener('click', closeLook);
-document.getElementById('startBtn').addEventListener('click', startRun);
-document.getElementById('restartBtn').addEventListener('click', restartRun);
+const startBtn = document.getElementById('startBtn');
+if (startBtn) {
+  startBtn.addEventListener('click', startRun);
+  startBtn.addEventListener('touchend', (e) => { e.preventDefault(); startRun(); }, { passive: false });
+}
+const restartBtn = document.getElementById('restartBtn');
+if (restartBtn) {
+  restartBtn.addEventListener('click', restartRun);
+  restartBtn.addEventListener('touchend', (e) => { e.preventDefault(); restartRun(); }, { passive: false });
+}
 const retryBuildBtn = document.getElementById('retryBuildBtn');
 if (retryBuildBtn) retryBuildBtn.addEventListener('click', () => {
   const b = lastBuild;
@@ -12581,12 +12592,16 @@ function resolveBreath(risk) {
   xpWaveMul = risk ? 2 : 1;
   wave++;
   applyWaveUnlocks();
+  updateHud();
+  if (pendingRewards && pendingRewards.length) {
+    flushReward();
+    return;
+  }
   paused = false;
   spawnWave();
   ensureEnemiesSpawned();
   spawnFloatText(player.x, player.y - 24, risk ? 'Bahis · XP x2' : 'Dalga ' + wave, risk ? '#e74c3c' : '#f1c40f');
   playSfx('wave', 0.28);
-  updateHud();
 }
 function openMerchant() {
   paused = true;
@@ -12692,12 +12707,16 @@ function closeMerchant() {
   resetJoystick();
   wave++;
   applyWaveUnlocks();
+  updateHud();
+  if (pendingRewards && pendingRewards.length) {
+    flushReward();
+    return;
+  }
   paused = false;
   spawnWave();
   ensureEnemiesSpawned();
   spawnFloatText(player.x, player.y - 24, 'Dalga ' + wave, '#f1c40f');
   playSfx('wave', 0.28);
-  updateHud();
 }
 
 const merchantLeaveBtn = document.getElementById('merchantLeaveBtn');
@@ -12713,8 +12732,14 @@ if (merchantLeaveBtn) {
 
 const breathSafe = document.getElementById('breathSafeBtn');
 const breathRisk = document.getElementById('breathRiskBtn');
-if (breathSafe) breathSafe.addEventListener('click', () => resolveBreath(false));
-if (breathRisk) breathRisk.addEventListener('click', () => resolveBreath(true));
+if (breathSafe) {
+  breathSafe.addEventListener('click', () => resolveBreath(false));
+  breathSafe.addEventListener('touchend', (e) => { e.preventDefault(); resolveBreath(false); }, { passive: false });
+}
+if (breathRisk) {
+  breathRisk.addEventListener('click', () => resolveBreath(true));
+  breathRisk.addEventListener('touchend', (e) => { e.preventDefault(); resolveBreath(true); }, { passive: false });
+}
 document.getElementById('restartFromPauseBtn').addEventListener('click', restartRun);
 document.getElementById('menuFromPauseBtn').addEventListener('click', goMainMenu);
 document.getElementById('menuFromOverBtn').addEventListener('click', goMainMenu);
@@ -12749,7 +12774,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260917h';
+const BUILD_ID = '20260918a';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

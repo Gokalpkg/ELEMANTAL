@@ -11214,187 +11214,1157 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
   return cy;
 }
 
-// 7. Biome Regular Enemies Dispatcher & Themed Renderers
+// 7. Biome Regular Enemies Dispatcher & Themed Pixel Art Renderers
+
+// --- 7.1 STONE BIOME (Taş Diyar): Runic Granite Golems, Gargoyle Shamans, Crag Hounds, Geode Slimes ---
+function drawStonePixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Runic Granite Golem (Heavy Tank / Walker)
+    const walkBob = Math.sin(time * 0.22 + en.phase) * 1.8;
+    const cy = y + walkBob;
+    // Granite Torso
+    pixDisk(x, cy, r, '#90a4ae', '#607d8b', '#37474f');
+    // Jagged Chiseled Shoulder Plates
+    ctx.fillStyle = '#455a64';
+    ctx.fillRect(Math.round(x - r * 1.25), Math.round(cy - r * 0.5), Math.round(r * 0.5), Math.round(r * 0.65));
+    ctx.fillRect(Math.round(x + r * 0.75), Math.round(cy - r * 0.5), Math.round(r * 0.5), Math.round(r * 0.65));
+    ctx.fillStyle = '#b0bec5';
+    ctx.fillRect(Math.round(x - r * 1.25), Math.round(cy - r * 0.5), Math.round(r * 0.5), 2.5);
+    ctx.fillRect(Math.round(x + r * 0.75), Math.round(cy - r * 0.5), Math.round(r * 0.5), 2.5);
+    // Glowing Blue Rune Carvings on Chest
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - 2), Math.round(cy + r * 0.1), 4, Math.round(r * 0.45));
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy + r * 0.25), Math.round(r * 0.7), 2.5);
+    // Visor Eye Slit
+    ctx.fillRect(Math.round(x - r * 0.45), Math.round(cy - r * 0.2), Math.round(r * 0.9), 3);
+    ctx.shadowBlur = 0;
+    // Spiked Granite Fist / Shield
+    const fistX = x + r * 0.95;
+    const fistY = cy + r * 0.2;
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(Math.round(fistX - 4), Math.round(fistY - 4), 8, 8);
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(Math.round(fistX - 3), Math.round(fistY - 3), 6, 6);
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect(Math.round(fistX - 1), Math.round(fistY - 1), 2, 2);
+  } else if (isCaster) {
+    // Tectonic Gargoyle Shaman (Shooter / Shaman)
+    const hover = Math.sin(time * 0.3 + en.phase) * 2.5;
+    const cy = y + hover;
+    // Basalt Cowl & Robe
+    pixDisk(x, cy + 2, r * 0.95, '#546e7a', '#37474f', '#21272b');
+    // Gargoyle Stone Horns
+    ctx.fillStyle = '#263238';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.5, cy - r * 0.3);
+    ctx.lineTo(x - r * 0.85, cy - r * 1.1);
+    ctx.lineTo(x - r * 0.2, cy - r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.5, cy - r * 0.3);
+    ctx.lineTo(x + r * 0.85, cy - r * 1.1);
+    ctx.lineTo(x + r * 0.2, cy - r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // Glowing Cyan Eyes
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(Math.round(x - r * 0.4), Math.round(cy - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.1), 3, 3);
+    ctx.shadowBlur = 0;
+    // Floating Carved Rune Monolith Slab orbiting beside it
+    const monoX = x + r * 1.05 + Math.cos(time * 0.15) * 4;
+    const monoY = cy - r * 0.3 + Math.sin(time * 0.15) * 4;
+    ctx.fillStyle = '#455a64';
+    ctx.fillRect(Math.round(monoX - 4), Math.round(monoY - 9), 8, 18);
+    ctx.fillStyle = '#263238';
+    ctx.strokeRect(Math.round(monoX - 4), Math.round(monoY - 9), 8, 18);
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 5;
+    ctx.fillRect(Math.round(monoX - 2), Math.round(monoY - 5), 4, 2);
+    ctx.fillRect(Math.round(monoX - 1), Math.round(monoY - 1), 2, 4);
+    ctx.fillRect(Math.round(monoX - 2), Math.round(monoY + 5), 4, 2);
+    ctx.shadowBlur = 0;
+    // Staff / Shaman Orb
+    const orbY = cy - r * 1.15 + Math.sin(time * 0.35) * 2;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 9;
+    pixDisk(x, orbY, 4, '#ffffff', '#00e5ff', '#0097a7');
+    ctx.shadowBlur = 0;
+  } else if (isRusher) {
+    // Basalt Crag Hound / Living Geode (Fast / Exploder)
+    const pounce = Math.sin(time * 0.45 + en.phase);
+    const cy = y + Math.abs(pounce) * 2;
+    // Hound Body
+    pixDisk(x, cy, r, '#78909c', '#455a64', '#263238');
+    // Slate Spine Spikes
+    ctx.fillStyle = '#b0bec5';
+    for (let sp = -1; sp <= 1; sp++) {
+      const sx = x + sp * (r * 0.45);
+      const sy = cy - r * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(sx - 3, sy);
+      ctx.lineTo(sx, sy - r * 0.65);
+      ctx.lineTo(sx + 3, sy);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Running Paws
+    const pawShift = Math.sin(time * 0.5) * 4;
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(Math.round(x - r * 0.6 + pawShift), Math.round(cy + r * 0.55), 4, 4);
+    ctx.fillRect(Math.round(x + r * 0.3 - pawShift), Math.round(cy + r * 0.55), 4, 4);
+    // Molten Core / Glowing Geode
+    const isEx = en.type === 'exploder';
+    const coreCol = isEx ? (Math.sin(time * 0.6) > 0 ? '#ffea00' : '#ff3d00') : '#00e5ff';
+    ctx.fillStyle = coreCol;
+    ctx.shadowColor = coreCol;
+    ctx.shadowBlur = isEx ? 12 : 6;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.05), Math.round(r * 0.7), 3);
+    ctx.shadowBlur = 0;
+  } else {
+    // Pebble Geode Slime (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#90a4ae', '#607d8b', '#37474f');
+    // Raw Quartz Crystal cluster on top
+    const cryY = y - r * 0.85 + squash * 1.5;
+    ctx.fillStyle = '#e0f7fa';
+    ctx.beginPath();
+    ctx.moveTo(x - 4, cryY);
+    ctx.lineTo(x, cryY - 7);
+    ctx.lineTo(x + 4, cryY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect(Math.round(x - 5), Math.round(cryY + 1), 3, 4);
+    ctx.fillRect(Math.round(x + 2), Math.round(cryY + 1), 3, 4);
+    // Cute Mineral Eyes
+    ctx.fillStyle = '#102027';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.1), 3, 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.1), 1.5, 1.5);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.1), 1.5, 1.5);
+  }
+}
+
+// --- 7.2 LAVA BIOME (Lav Çukuru): Obsidian Crushers, Hellfire Cultists, Hell-Imps, Magma Oozes ---
+function drawLavaPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Obsidian Magma Crusher (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.6;
+    // Black Obsidian Plates
+    pixDisk(x, cy, r, '#5d4037', '#2b1b17', '#140c0a');
+    // Glowing Magma Fissures in Chest
+    ctx.fillStyle = '#ff3d00';
+    ctx.shadowColor = '#ff6d00';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(Math.round(x - r * 0.5), Math.round(cy - r * 0.1), Math.round(r * 1.0), 3.5);
+    ctx.fillRect(Math.round(x - 1.5), Math.round(cy + 2), 3, Math.round(r * 0.45));
+    // Volcanic Chimney Vents on Shoulders
+    ctx.fillStyle = '#1c0f0a';
+    ctx.fillRect(Math.round(x - r * 1.1), Math.round(cy - r * 0.7), 4, 8);
+    ctx.fillRect(Math.round(x + r * 0.8), Math.round(cy - r * 0.7), 4, 8);
+    ctx.fillStyle = '#ffea00';
+    ctx.fillRect(Math.round(x - r * 1.1 + 1), Math.round(cy - r * 0.7 - 2), 2, 2);
+    ctx.fillRect(Math.round(x + r * 0.8 + 1), Math.round(cy - r * 0.7 - 2), 2, 2);
+    // Molten Visor
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.3), Math.round(r * 0.7), 2.5);
+    ctx.shadowBlur = 0;
+    // Spiked Magma Mace
+    const maceX = x + r * 1.0;
+    const maceY = cy + r * 0.15;
+    ctx.fillStyle = '#ff3d00';
+    ctx.beginPath();
+    ctx.arc(maceX, maceY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffea00';
+    ctx.fillRect(Math.round(maceX - 1), Math.round(maceY - 1), 2, 2);
+  } else if (isCaster) {
+    // Hellfire Pyromancer Cultist (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.28 + en.phase) * 2.2;
+    // Crimson Robe
+    pixDisk(x, cy + 2, r * 0.95, '#d32f2f', '#b71c1c', '#4a0808');
+    // Obsidian Demon Horns
+    ctx.fillStyle = '#211311';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.5, cy - r * 0.3);
+    ctx.quadraticCurveTo(x - r * 0.9, cy - r * 1.1, x - r * 0.4, cy - r * 0.9);
+    ctx.lineTo(x - r * 0.2, cy - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.5, cy - r * 0.3);
+    ctx.quadraticCurveTo(x + r * 0.9, cy - r * 1.1, x + r * 0.4, cy - r * 0.9);
+    ctx.lineTo(x + r * 0.2, cy - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    // Blazing Fiery Eyes
+    ctx.fillStyle = '#ffd600';
+    ctx.shadowColor = '#ff6d00';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.38), Math.round(cy - r * 0.12), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.12), 3, 2.5);
+    ctx.shadowBlur = 0;
+    // Blazing Fireball Orb Floating Overhead
+    const orbY = cy - r * 1.2 + Math.sin(time * 0.4) * 3;
+    ctx.fillStyle = '#ff3d00';
+    ctx.shadowColor = '#ff3d00';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath();
+    ctx.arc(x, orbY - 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  } else if (isRusher) {
+    // Flaming Hell-Imp / Fire Skull (Fast / Exploder)
+    const flap = Math.sin(time * 0.5 + en.phase);
+    const cy = y + flap * 2.5;
+    // Bat Wings
+    ctx.fillStyle = '#211311';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.3, cy);
+    ctx.lineTo(x - r * 1.4, cy - r * 0.7 + flap * 4);
+    ctx.lineTo(x - r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.3, cy);
+    ctx.lineTo(x + r * 1.4, cy - r * 0.7 + flap * 4);
+    ctx.lineTo(x + r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Red Demon Body
+    pixDisk(x, cy, r, '#ff5252', '#d32f2f', '#7f0000');
+    // Flaming Horn Crest
+    ctx.fillStyle = '#ff3d00';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.4, cy - r * 0.5);
+    ctx.lineTo(x, cy - r * 1.2 + Math.sin(time * 0.6) * 3);
+    ctx.lineTo(x + r * 0.4, cy - r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // Exploder Magma Bomb Pulse
+    const isEx = en.type === 'exploder';
+    if (isEx) {
+      ctx.fillStyle = '#ffd600';
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 12;
+      ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), Math.round(r * 0.7), 4);
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillStyle = '#ffea00';
+      ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.12), 3, 3);
+      ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.12), 3, 3);
+    }
+  } else {
+    // Magma Bubble Ooze (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.3 + en.phase);
+    pixDisk(x, y, r, '#ff8a65', '#ff5722', '#b71c1c');
+    // Dark Cooling Crust Flecks
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(Math.round(x - r * 0.4), Math.round(y - r * 0.3), 3, 2);
+    ctx.fillRect(Math.round(x + r * 0.2), Math.round(y - r * 0.2), 3, 2);
+    ctx.fillRect(Math.round(x - 1), Math.round(y + r * 0.2), 3, 2);
+    // Popping Lava Bubble Sprout
+    const bubY = y - r * 0.85 + squash * 2;
+    ctx.fillStyle = '#ffab00';
+    ctx.beginPath();
+    ctx.arc(x, bubY, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffea00';
+    ctx.fillRect(Math.round(x - 1), Math.round(bubY - 1), 2, 2);
+    // Fierce Ember Eyes
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillRect(Math.round(x - r * 0.38), Math.round(y - r * 0.05), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(y - r * 0.05), 3, 3);
+  }
+}
+
+// --- 7.3 ICE BIOME (Buz Geçidi): Glacial Frost Golems, Cryomancers, Frost Wolves, Ice-Cube Slimes ---
+function drawIcePixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Glacial Frost Golem (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.5;
+    // Translucent Cyan Ice Armor
+    pixDisk(x, cy, r, '#e0f7fa', '#80deea', '#0288d1');
+    // Jagged Towering Ice Spikes on Shoulders
+    ctx.fillStyle = '#b2ebf2';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 1.25, cy + r * 0.2);
+    ctx.lineTo(x - r * 0.9, cy - r * 1.0);
+    ctx.lineTo(x - r * 0.55, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.55, cy);
+    ctx.lineTo(x + r * 0.9, cy - r * 1.0);
+    ctx.lineTo(x + r * 1.25, cy + r * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    // Heavy Frozen Slab Shield
+    ctx.fillStyle = '#4dd0e1';
+    ctx.fillRect(Math.round(x + r * 0.7), Math.round(cy - r * 0.3), 6, Math.round(r * 0.8));
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x + r * 0.7), Math.round(cy - r * 0.3), 6, 2);
+    // Glowing Cyan Hollow Eye Slits
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.42), Math.round(cy - r * 0.15), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.15), 3, 3);
+    ctx.shadowBlur = 0;
+  } else if (isCaster) {
+    // Blizzard Cryomancer (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.25 + en.phase) * 2.4;
+    // Pale Cyan Hooded Cowl
+    pixDisk(x, cy + 2, r * 0.92, '#e0f7fa', '#4fc3f7', '#0277bd');
+    // Pointed Frost Crown
+    ctx.fillStyle = '#b3e5fc';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.6, cy - r * 0.3);
+    ctx.lineTo(x, cy - r * 1.15);
+    ctx.lineTo(x + r * 0.6, cy - r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // 3 Spinning Sharp Icicle Shards Orbiting Caster
+    for (let ic = 0; ic < 3; ic++) {
+      const ia = time * 0.08 + (ic * Math.PI * 2 / 3);
+      const ix = x + Math.cos(ia) * (r * 1.25);
+      const iy = cy + Math.sin(ia) * (r * 0.65);
+      ctx.fillStyle = '#e0f7fa';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 4;
+      ctx.fillRect(Math.round(ix - 1.5), Math.round(iy - 4), 3, 8);
+      ctx.shadowBlur = 0;
+    }
+    // Glowing Ice Blue Eyes
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.1), 3, 2.5);
+  } else if (isRusher) {
+    // Frost Shard Wolf (Fast / Exploder)
+    const cy = y + Math.abs(Math.sin(time * 0.4 + en.phase)) * 2;
+    // Crystalline Body
+    pixDisk(x, cy, r, '#ffffff', '#b3e5fc', '#0288d1');
+    // Razor Ice Spikes Along Spine
+    ctx.fillStyle = '#00e5ff';
+    for (let sp = -1; sp <= 1; sp++) {
+      const sx = x + sp * (r * 0.4);
+      const sy = cy - r * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(sx - 2.5, sy);
+      ctx.lineTo(sx, sy - r * 0.6);
+      ctx.lineTo(sx + 2.5, sy);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Exploder Core / Eyes
+    const isEx = en.type === 'exploder';
+    const eyeCol = isEx ? '#ff4081' : '#00e5ff';
+    ctx.fillStyle = eyeCol;
+    ctx.shadowColor = eyeCol;
+    ctx.shadowBlur = isEx ? 10 : 4;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.08), Math.round(r * 0.7), 2.5);
+    ctx.shadowBlur = 0;
+  } else {
+    // Permafrost Ice Cube Slime (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#e1f5fe', '#4fc3f7', '#0277bd');
+    // Embedded Trapped Snowflake
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - 3), Math.round(y - 3), 6, 1.5);
+    ctx.fillRect(Math.round(x - 1), Math.round(y - 5), 1.5, 6);
+    // Shivering Eyes & Frost Blush
+    ctx.fillStyle = '#01579b';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.1), 3, 3);
+    ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
+    ctx.fillRect(Math.round(x - r * 0.5), Math.round(y + r * 0.2), 3, 1.5);
+    ctx.fillRect(Math.round(x + r * 0.3), Math.round(y + r * 0.2), 3, 1.5);
+  }
+}
+
+// --- 7.4 STORM BIOME (Fırtına Tepesi): Voltaic Automatons, Cloud Shamans, Thunder Wasps, Static Jellies ---
+function drawStormPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Voltaic Automaton (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.22 + en.phase) * 1.5;
+    // Brass & Copper Plating
+    pixDisk(x, cy, r, '#ffd54f', '#f57f17', '#3e2723');
+    // Twin Shoulder-Mounted Tesla Coils
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(Math.round(x - r * 1.15), Math.round(cy - r * 0.8), 4, 10);
+    ctx.fillRect(Math.round(x + r * 0.85), Math.round(cy - r * 0.8), 4, 10);
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x - r * 1.15 + 2, cy - r * 0.8 - 2, 3, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.85 + 2, cy - r * 0.8 - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // High Voltage Visor
+    ctx.fillStyle = '#ffff00';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.45), Math.round(cy - r * 0.15), Math.round(r * 0.9), 3);
+    ctx.shadowBlur = 0;
+  } else if (isCaster) {
+    // Tempest Cloud Sorcerer (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.3 + en.phase) * 2.6;
+    // Dark Storm-Cloud Cloak
+    pixDisk(x, cy + 2, r * 0.95, '#7e57c2', '#4527a0', '#1a0f3d');
+    // Crackling Plasma Lightning Orb Hovering Overhead
+    const orbY = cy - r * 1.2 + Math.sin(time * 0.35) * 2.5;
+    ctx.fillStyle = '#ffeb3b';
+    ctx.shadowColor = '#ffea00';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Mini Electric Arc Sparks
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, orbY);
+    ctx.lineTo(x, orbY - 4);
+    ctx.lineTo(x + 5, orbY);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Piercing Yellow Spark Eyes
+    ctx.fillStyle = '#ffff00';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.shadowBlur = 0;
+  } else if (isRusher) {
+    // Thunder Wasp / Sparkfly (Fast / Exploder)
+    const buzz = Math.sin(time * 0.6 + en.phase);
+    const cy = y + buzz * 2.8;
+    // Buzzing Electric Wings
+    ctx.fillStyle = 'rgba(128, 222, 234, 0.65)';
+    ctx.fillRect(Math.round(x - r * 1.3), Math.round(cy - r * 0.8 + buzz * 3), Math.round(r * 0.9), 4);
+    ctx.fillRect(Math.round(x + r * 0.4), Math.round(cy - r * 0.8 + buzz * 3), Math.round(r * 0.9), 4);
+    // Striped Abdomen
+    pixDisk(x, cy, r, '#fff59d', '#fbc02d', '#212121');
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(Math.round(x - r * 0.7), Math.round(cy - 2), Math.round(r * 1.4), 2.5);
+    ctx.fillRect(Math.round(x - r * 0.6), Math.round(cy + 4), Math.round(r * 1.2), 2.5);
+    // Lightning Needle Stinger
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - 1), Math.round(cy + r * 0.75), 2.5, 6);
+    ctx.shadowBlur = 0;
+  } else {
+    // Static Plasma Jelly (Slime / Swarmer / Leech)
+    pixDisk(x, y, r, '#fffde7', '#ffd600', '#f57f17');
+    // Mini Antennae
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(Math.round(x - 3), Math.round(y - r * 0.9), 2, 4);
+    ctx.fillRect(Math.round(x + 2), Math.round(y - r * 0.9), 2, 4);
+    // Internal Electric Filament
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - 2), Math.round(y - 1), 4, 2);
+    ctx.shadowBlur = 0;
+    // Eyes
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.1), 3, 3);
+  }
+}
+
+// --- 7.5 WATER BIOME (Sazlık / Okyanus): Abyssal Crabs, Sirens, Angler Piranhas, Bioluminescent Jelly ---
+function drawWaterPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Coral Abyssal Crab (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.4;
+    // Hard Turquoise/Teal Carapace
+    pixDisk(x, cy, r, '#4dd0e1', '#00838f', '#004d40');
+    // Twin Periscope Stalk Eyes
+    ctx.fillStyle = '#004d40';
+    ctx.fillRect(Math.round(x - r * 0.45), Math.round(cy - r * 0.9), 3, 6);
+    ctx.fillRect(Math.round(x + r * 0.25), Math.round(cy - r * 0.9), 3, 6);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillRect(Math.round(x - r * 0.45), Math.round(cy - r * 0.95), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.25), Math.round(cy - r * 0.95), 3, 3);
+    // Giant Heavy Crusher Pincer Claw
+    const clawX = x + r * 1.0;
+    const clawY = cy - r * 0.2;
+    ctx.fillStyle = '#ff7043';
+    ctx.beginPath();
+    ctx.arc(clawX, clawY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#d84315';
+    ctx.fillRect(Math.round(clawX - 3), Math.round(clawY - 8), 3, 6);
+    ctx.fillRect(Math.round(clawX + 1), Math.round(clawY - 8), 3, 6);
+  } else if (isCaster) {
+    // Abyssal Siren Priestess (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.26 + en.phase) * 2.3;
+    // Finned Deep-Sea Hood
+    pixDisk(x, cy + 2, r * 0.92, '#80cbc4', '#00695c', '#00332c');
+    // Side Fins
+    ctx.fillStyle = '#26a69a';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.7, cy);
+    ctx.lineTo(x - r * 1.2, cy - r * 0.4);
+    ctx.lineTo(x - r * 0.6, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.7, cy);
+    ctx.lineTo(x + r * 1.2, cy - r * 0.4);
+    ctx.lineTo(x + r * 0.6, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Swirling Aqua Whirlpool Orb
+    const orbY = cy - r * 1.2 + Math.sin(time * 0.35) * 3;
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 9;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x - 1, orbY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Eyes
+    ctx.fillStyle = '#00b4d8';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.1), 3, 2.5);
+  } else if (isRusher) {
+    // Abyssal Angler Piranha (Fast / Exploder)
+    const swim = Math.sin(time * 0.45 + en.phase);
+    const cy = y + swim * 2.2;
+    // Piranha Body
+    pixDisk(x, cy, r, '#4dd0e1', '#0097a7', '#004d40');
+    // Dorsal Razor Fin
+    ctx.fillStyle = '#ff7043';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.3, cy - r * 0.5);
+    ctx.lineTo(x, cy - r * 1.1);
+    ctx.lineTo(x + r * 0.4, cy - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    // Dangling Angler Lure Bulb in Front
+    const lureX = x - r * 1.05;
+    const lureY = cy - r * 0.5;
+    ctx.fillStyle = '#ffff00';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(lureX, lureY, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Sharp Needle Fangs
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.7), Math.round(cy + 2), 2, 3);
+    ctx.fillRect(Math.round(x - r * 0.5), Math.round(cy + 2), 2, 3);
+  } else {
+    // Bioluminescent Jelly-Poly (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#b2ebf2', '#00acc1', '#006064');
+    // 4 Undulating Tentacles Trailing Beneath
+    ctx.fillStyle = '#80deea';
+    for (let t = 0; t < 4; t++) {
+      const tx = x - r * 0.45 + t * (r * 0.3);
+      const ty = y + r * 0.5 + Math.sin(time * 0.4 + t) * 3;
+      ctx.fillRect(Math.round(tx), Math.round(ty), 2, 5);
+    }
+    // Bioluminescent Glowing Heart
+    ctx.fillStyle = '#00e5ff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+// --- 7.6 FOREST BIOME (Sisli Orman): Barkskin Treants, Mushroom Druids, Thorn Stalkers, Moss Sproutlings ---
+function drawForestPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Ancient Barkskin Treant (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.18 + en.phase) * 1.6;
+    // Wood Trunk Body
+    pixDisk(x, cy, r, '#6d4c41', '#4e342e', '#271711');
+    // Lush Moss Mantle on Shoulders
+    ctx.fillStyle = '#43a047';
+    ctx.fillRect(Math.round(x - r * 1.15), Math.round(cy - r * 0.45), Math.round(r * 0.5), Math.round(r * 0.4));
+    ctx.fillRect(Math.round(x + r * 0.7), Math.round(cy - r * 0.45), Math.round(r * 0.5), Math.round(r * 0.4));
+    // Branching Antlers
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(Math.round(x - r * 0.7), Math.round(cy - r * 1.0), 3, 7);
+    ctx.fillRect(Math.round(x - r * 0.9), Math.round(cy - r * 1.15), 4, 3);
+    ctx.fillRect(Math.round(x + r * 0.5), Math.round(cy - r * 1.0), 3, 7);
+    ctx.fillRect(Math.round(x + r * 0.7), Math.round(cy - r * 1.15), 4, 3);
+    // Glowing Emerald Eyes
+    ctx.fillStyle = '#76ff03';
+    ctx.shadowColor = '#76ff03';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.4), Math.round(cy - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.1), 3, 3);
+    ctx.shadowBlur = 0;
+  } else if (isCaster) {
+    // Spore Mushroom Druid (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.25 + en.phase) * 2.2;
+    // Wood & Leaf Body
+    pixDisk(x, cy + 2, r * 0.9, '#a5d6a7', '#2e7d32', '#1b5e20');
+    // Broad Red Toadstool Mushroom Cap Wizard Hat
+    const capY = cy - r * 0.6;
+    ctx.fillStyle = '#d32f2f';
+    ctx.beginPath();
+    ctx.ellipse(x, capY, r * 1.15, r * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // White Pixel Spots on Mushroom Cap
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.5), Math.round(capY - 2), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.25), Math.round(capY - 3), 3, 3);
+    ctx.fillRect(Math.round(x - 1), Math.round(capY - r * 0.25), 3, 3);
+    // Spore Wand / Cloud
+    const sporeY = cy - r * 1.1 + Math.sin(time * 0.35) * 3;
+    ctx.fillStyle = '#69f0ae';
+    ctx.shadowColor = '#69f0ae';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x, sporeY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Druid Eyes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.05), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.05), 3, 2.5);
+  } else if (isRusher) {
+    // Bramble Thorn Stalker (Fast / Exploder)
+    const cy = y + Math.abs(Math.sin(time * 0.45 + en.phase)) * 2.2;
+    // Vine Body
+    pixDisk(x, cy, r, '#81c784', '#388e3c', '#1b5e20');
+    // Bramble Thorns
+    ctx.fillStyle = '#689f38';
+    for (let th = -1; th <= 1; th++) {
+      const tx = x + th * (r * 0.45);
+      const ty = cy - r * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(tx - 2, ty);
+      ctx.lineTo(tx, ty - r * 0.55);
+      ctx.lineTo(tx + 2, ty);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Exploder Spore Pod / Eyes
+    const isEx = en.type === 'exploder';
+    ctx.fillStyle = isEx ? '#ba68c8' : '#76ff03';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = isEx ? 10 : 4;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), Math.round(r * 0.7), 2.5);
+    ctx.shadowBlur = 0;
+  } else {
+    // Forest Moss Sproutling (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#a5d6a7', '#43a047', '#1b5e20');
+    // Blooming Clover / Flower Sprout on Top
+    const sprY = y - r * 0.85 + squash * 2;
+    ctx.fillStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.arc(x, sprY, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4caf50';
+    ctx.fillRect(Math.round(x - 1), Math.round(sprY + 2), 2, 4);
+    // Cute Kawaii Anime Eyes
+    ctx.fillStyle = '#1b5e20';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.08), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.08), 3, 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.08), 1.5, 1.5);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.08), 1.5, 1.5);
+  }
+}
+
+// --- 7.7 SAND BIOME (Kum Ovası): Cactus Knights, Dune Shamans, Sand Scorpions, Sand Mudlets ---
+function drawSandPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Cactus Knight (Heavy Tank / Walker)
+    return drawCactusEnemy(ctx, x, y, r, en, time, false);
+  } else if (isCaster) {
+    // Dune Nomad Sorcerer (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.28 + en.phase) * 2.2;
+    // Sand Keffiyeh Turban & Robe
+    pixDisk(x, cy + 2, r * 0.95, '#fff8e1', '#d7ccc8', '#8d6e63');
+    // Turban Wrap
+    const turY = cy - r * 0.55;
+    ctx.fillStyle = '#ffecb3';
+    ctx.beginPath();
+    ctx.ellipse(x, turY, r * 0.85, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffb300';
+    ctx.fillRect(Math.round(x - 2), Math.round(turY - 4), 4, 4);
+    // Hovering Miniature Sand Vortex Orb
+    const orbY = cy - r * 1.15 + Math.sin(time * 0.35) * 3;
+    ctx.fillStyle = '#ffd54f';
+    ctx.shadowColor = '#ffb300';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Glowing Amber Eyes Peering Behind Veil
+    ctx.fillStyle = '#ff9800';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.1), 3, 2.5);
+  } else if (isRusher) {
+    // Dune Sand Scorpion (Fast / Exploder)
+    const cy = y + Math.sin(time * 0.4 + en.phase) * 1.8;
+    // Segmented Chitin Carapace
+    pixDisk(x, cy, r, '#d7ccc8', '#8d6e63', '#4e342e');
+    // Arched Segmented Scorpion Tail with Venom Stinger
+    ctx.strokeStyle = '#6d4c41';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, cy - r * 0.5);
+    ctx.quadraticCurveTo(x + r * 0.8, cy - r * 1.1, x, cy - r * 1.1);
+    ctx.stroke();
+    // Glowing Venom Tip
+    const isEx = en.type === 'exploder';
+    ctx.fillStyle = isEx ? '#ff1744' : '#76ff03';
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - 2), Math.round(cy - r * 1.1 - 2), 4, 4);
+    ctx.shadowBlur = 0;
+    // Pincer Claws Snapped Forward
+    ctx.fillStyle = '#a1887f';
+    ctx.fillRect(Math.round(x - r * 1.0), Math.round(cy + 2), 4, 5);
+    ctx.fillRect(Math.round(x + r * 0.75), Math.round(cy + 2), 4, 5);
+  } else {
+    // Desert Sand Mudlet (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#ffe082', '#ffb300', '#ff8f00');
+    // Mini Desert Cactus Sprout with Pink Flower
+    const sprY = y - r * 0.85 + squash * 2;
+    ctx.fillStyle = '#4caf50';
+    ctx.fillRect(Math.round(x - 2), Math.round(sprY), 4, 6);
+    ctx.fillStyle = '#e91e63';
+    ctx.fillRect(Math.round(x - 1.5), Math.round(sprY - 2), 3, 2.5);
+    // Squinting Desert Eyes
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.08), 3, 2);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.08), 3, 2);
+  }
+}
+
+// --- 7.8 NIGHT BIOME (Gece Harabesi): Dread Gargoyles, Vampire Arch-Mages, Blood Bats, Blood Globules ---
+function drawNightPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Dread Gargoyle Thrall (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.5;
+    // Gothic Iron Plate Armor
+    pixDisk(x, cy, r, '#455a64', '#263238', '#101518');
+    // Folded Black Gargoyle Bat Wings on Back
+    ctx.fillStyle = '#1a1026';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.4, cy - r * 0.2);
+    ctx.lineTo(x - r * 1.3, cy - r * 0.8);
+    ctx.lineTo(x - r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.4, cy - r * 0.2);
+    ctx.lineTo(x + r * 1.3, cy - r * 0.8);
+    ctx.lineTo(x + r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Piercing Crimson Slit Visor
+    ctx.fillStyle = '#ff1744';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(Math.round(x - r * 0.42), Math.round(cy - r * 0.15), Math.round(r * 0.85), 3);
+    ctx.shadowBlur = 0;
+  } else if (isCaster) {
+    // Vampire Blood Arch-Mage (Shooter / Shaman)
+    return drawVampireEnemy(ctx, x, y, r, en, time, false);
+  } else if (isRusher) {
+    // Crimson Blood Bat / Shadow Wraith (Fast / Exploder)
+    const flap = Math.sin(time * 0.45 + en.phase);
+    const cy = y + flap * 2.5;
+    // Crimson Leather Bat Wings
+    ctx.fillStyle = '#4a148c';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.3, cy);
+    ctx.lineTo(x - r * 1.5, cy - r * 0.8 + flap * 4);
+    ctx.lineTo(x - r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.3, cy);
+    ctx.lineTo(x + r * 1.5, cy - r * 0.8 + flap * 4);
+    ctx.lineTo(x + r * 0.8, cy + r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Bat Body
+    pixDisk(x, cy, r, '#880e4f', '#4a148c', '#180728');
+    // Glowing Ruby Eyes
+    ctx.fillStyle = '#ff1744';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = 6;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.1), 3, 2.5);
+    ctx.shadowBlur = 0;
+  } else {
+    // Vampiric Blood Globule (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#c2185b', '#880e4f', '#3e0420');
+    // Twin Vampire Fang Marks
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - 3), Math.round(y - 2), 2, 3);
+    ctx.fillRect(Math.round(x + 1), Math.round(y - 2), 2, 3);
+    // Glowing Sinister Ruby Eyes
+    ctx.fillStyle = '#ff1744';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = 5;
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.2), 2.5, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.2), 2.5, 2.5);
+    ctx.shadowBlur = 0;
+  }
+}
+
+// --- 7.9 PINK BIOME (Pembe Diyar / Şeker): Gummy Bear Brawlers, Gingerbread Sorcerers, Peppermint Rollers, Pudding Slimes ---
+function drawPinkPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Gummy Bear Brawler (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.5;
+    // Translucent Pink Gummy Body
+    pixDisk(x, cy, r, '#f48fb1', '#e91e63', '#880e4f');
+    // Round Gummy Bear Ears
+    ctx.fillStyle = '#f06292';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.65, cy - r * 0.75, r * 0.35, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.65, cy - r * 0.75, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    // Giant Striped Lollipop War Hammer
+    const popX = x + r * 0.95;
+    const popY = cy - r * 0.2;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(popX, popY, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#e91e63';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(popX, popY, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // Cute Brow & Eyes
+    ctx.fillStyle = '#4a148c';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.1), 3, 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 1.5, 1.5);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.1), 1.5, 1.5);
+  } else if (isCaster) {
+    // Gingerbread Sorcerer (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.26 + en.phase) * 2.2;
+    // Golden-Brown Baked Gingerbread Body
+    pixDisk(x, cy + 2, r * 0.95, '#bcaaa4', '#8d6e63', '#4e342e');
+    // White Royal Icing Piping Trim
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.5), Math.round(cy - r * 0.5), Math.round(r * 1.0), 2);
+    // Gumdrop Buttons
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillRect(Math.round(x - 1.5), Math.round(cy - 2), 3, 3);
+    ctx.fillStyle = '#e91e63';
+    ctx.fillRect(Math.round(x - 1.5), Math.round(cy + 4), 3, 3);
+    // Striped Peppermint Candy Cane Wand
+    const caneX = x + r * 1.0;
+    const caneY = cy - r * 0.3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(caneX - 1.5), Math.round(caneY - 6), 3, 14);
+    ctx.fillStyle = '#e91e63';
+    ctx.fillRect(Math.round(caneX - 1.5), Math.round(caneY - 4), 3, 2);
+    ctx.fillRect(Math.round(caneX - 1.5), Math.round(caneY + 1), 3, 2);
+    // Sugar Star Sparkle
+    const orbY = cy - r * 1.15 + Math.sin(time * 0.35) * 3;
+    ctx.fillStyle = '#ff4081';
+    ctx.shadowColor = '#ff4081';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  } else if (isRusher) {
+    // Peppermint Roller / Jawbreaker (Fast / Exploder)
+    const cy = y + Math.sin(time * 0.4 + en.phase) * 1.8;
+    const spin = time * 0.15;
+    // Peppermint Candy Wheel
+    pixDisk(x, cy, r, '#ffffff', '#f8bbd0', '#c2185b');
+    // Red-and-White Swirl Spokes
+    ctx.strokeStyle = '#e91e63';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let s = 0; s < 4; s++) {
+      const sa = spin + s * (Math.PI / 2);
+      ctx.moveTo(x, cy);
+      ctx.lineTo(x + Math.cos(sa) * r, cy + Math.sin(sa) * r);
+    }
+    ctx.stroke();
+    // Center Sweet Core
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Strawberry Pudding Slime (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#f8bbd0', '#f06292', '#ad1457');
+    // Whipped Cream Dollop & Glossy Red Cherry on Top
+    const cherY = y - r * 0.85 + squash * 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, cherY + 1, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath();
+    ctx.arc(x, cherY - 3, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Big Kawaii Anime Eyes
+    ctx.fillStyle = '#4a148c';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.08), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.08), 3, 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(y - r * 0.08), 1.5, 1.5);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(y - r * 0.08), 1.5, 1.5);
+  }
+}
+
+// --- 7.10 KETCHUP BIOME (Ketçap Salonu): Mustard Jug Crushers, Sauce Shamans, French-Fry Pikemen, Sauce Droplets ---
+function drawKetchupPixelEnemy(ctx, en, x, y, r, role, time) {
+  const isCaster = role === 'caster';
+  const isHeavy = role === 'heavy';
+  const isRusher = role === 'rusher';
+
+  if (isHeavy) {
+    // Mustard Jug Crusher (Heavy Tank / Walker)
+    const cy = y + Math.sin(time * 0.2 + en.phase) * 1.5;
+    // Bright Yellow Mustard Jug Body
+    pixDisk(x, cy, r, '#fff59d', '#fbc02d', '#f57f17');
+    // Yellow Dispenser Nozzle Spout Helmet
+    ctx.fillStyle = '#f57f17';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, cy - r * 0.7);
+    ctx.lineTo(x, cy - r * 1.25);
+    ctx.lineTo(x + 3, cy - r * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    // Burger Patty Shoulder Guards
+    ctx.fillStyle = '#4e342e';
+    ctx.fillRect(Math.round(x - r * 1.2), Math.round(cy - r * 0.4), Math.round(r * 0.45), Math.round(r * 0.4));
+    ctx.fillRect(Math.round(x + r * 0.75), Math.round(cy - r * 0.4), Math.round(r * 0.45), Math.round(r * 0.4));
+    // Pickle Club / Hotdog Shield
+    const clubX = x + r * 0.95;
+    const clubY = cy + r * 0.15;
+    ctx.fillStyle = '#388e3c';
+    ctx.fillRect(Math.round(clubX - 3), Math.round(clubY - 6), 6, 12);
+    // Eyes
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.1), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.1), 3, 3);
+  } else if (isCaster) {
+    // Ketchup Squeeze Bottle Shaman (Shooter / Shaman)
+    const cy = y + Math.sin(time * 0.26 + en.phase) * 2.2;
+    // Tall Bright Red Ketchup Bottle
+    pixDisk(x, cy + 2, r * 0.92, '#ef5350', '#c62828', '#7f0000');
+    // White Twist-Cap Nozzle Hat
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(x - 4, cy - r * 0.65);
+    ctx.lineTo(x, cy - r * 1.2);
+    ctx.lineTo(x + 4, cy - r * 0.65);
+    ctx.closePath();
+    ctx.fill();
+    // Hot Tomato Sauce Orb Casting Overhead
+    const orbY = cy - r * 1.15 + Math.sin(time * 0.35) * 3;
+    ctx.fillStyle = '#d32f2f';
+    ctx.shadowColor = '#d32f2f';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(x, orbY, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffeb3b';
+    ctx.beginPath();
+    ctx.arc(x, orbY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Eyes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.08), 3, 2.5);
+    ctx.fillRect(Math.round(x + r * 0.12), Math.round(cy - r * 0.08), 3, 2.5);
+  } else if (isRusher) {
+    // Crisp French-Fry Pikeman (Fast / Exploder)
+    const cy = y + Math.abs(Math.sin(time * 0.45 + en.phase)) * 2;
+    // Red Takeout Pouch Base
+    pixDisk(x, cy + 2, r * 0.9, '#ef5350', '#d32f2f', '#b71c1c');
+    // Crispy Golden French Fries Protruding
+    ctx.fillStyle = '#fbc02d';
+    ctx.fillRect(Math.round(x - 5), Math.round(cy - r * 0.9), 3, Math.round(r * 0.7));
+    ctx.fillRect(Math.round(x - 1), Math.round(cy - r * 1.15), 3, Math.round(r * 0.9));
+    ctx.fillRect(Math.round(x + 3), Math.round(cy - r * 0.8), 3, Math.round(r * 0.6));
+    // Sparkling Salt Pixels on Potato Spear
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.round(x), Math.round(cy - r * 1.15), 1.5, 1.5);
+    // Eyes
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(Math.round(x - r * 0.35), Math.round(cy - r * 0.05), 3, 3);
+    ctx.fillRect(Math.round(x + r * 0.15), Math.round(cy - r * 0.05), 3, 3);
+  } else {
+    // Sauce Splatter Droplet (Slime / Swarmer / Leech)
+    const squash = Math.sin(time * 0.28 + en.phase);
+    pixDisk(x, y, r, '#ef5350', '#c62828', '#800000');
+    // Yellow Mustard Spiral on Top
+    ctx.strokeStyle = '#fbc02d';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(x, y - 2, r * 0.4, 0, Math.PI * 1.4);
+    ctx.stroke();
+    // Green Tomato Stem Cap
+    const stemY = y - r * 0.85 + squash * 2;
+    ctx.fillStyle = '#388e3c';
+    ctx.fillRect(Math.round(x - 1), Math.round(stemY - 2), 2, 4);
+    ctx.fillRect(Math.round(x - 3), Math.round(stemY), 6, 2);
+    // Goofy Big Cartoon Eyes
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.08, 3.5, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.32, y - r * 0.08, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#102027';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.08, 1.8, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.32, y - r * 0.08, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// 7.11 Master Biome Enemy Dispatcher
 function drawBiomeEnemy(ctx, en, time, biome, fogged) {
   const bk = (biome && biome.key) || 'stone';
   const type = en.type;
 
-  if (type === 'shooter' || type === 'shaman') {
-    if (bk === 'night' || bk === 'stone') {
-      return drawVampireEnemy(ctx, en.x, en.y, en.r, en, time, fogged);
-    }
-    const lift = 4 + en.r * 0.14 + Math.abs(Math.sin(time * 0.2 + en.phase)) * 2.2;
-    const cy = en.y - lift;
-    drawGroundShadow(en.x + 2, en.y + en.r * 0.5, en.r * 1.05, en.r * 0.26);
-    if (fogged) { pixDisk(en.x, cy, en.r, '#102218', '#102218', '#0a140f'); return cy; }
-
-    ctx.save();
-    let robeCol = bk === 'lava' ? '#b71c1c' : bk === 'forest' ? '#1b5e20' : bk === 'ice' ? '#0277bd' : bk === 'storm' ? '#311b92' : bk === 'water' ? '#006064' : '#5d4037';
-    let skinCol = bk === 'lava' ? '#ff8a65' : bk === 'forest' ? '#a5d6a7' : bk === 'ice' ? '#e1f5fe' : bk === 'storm' ? '#d1c4e9' : bk === 'water' ? '#80deea' : '#d7ccc8';
-    let orbCol = bk === 'lava' ? '#ff3d00' : bk === 'forest' ? '#00e676' : bk === 'ice' ? '#00e5ff' : bk === 'storm' ? '#ffeb3b' : bk === 'water' ? '#00b0ff' : '#ffa000';
-
-    pixDisk(en.x, cy + 2, en.r * 0.95, shadeHex(robeCol, 40), robeCol, shadeHex(robeCol, -40));
-
-    const headR = en.r * 0.58;
-    const headY = cy - en.r * 0.38;
-    pixDisk(en.x, headY, headR, '#ffffff', skinCol, shadeHex(skinCol, -30));
-
-    if (bk === 'lava') {
-      ctx.fillStyle = '#ff1744';
-      ctx.fillRect(Math.round(en.x - headR * 0.7), Math.round(headY - headR * 0.8), 3, 5);
-      ctx.fillRect(Math.round(en.x + headR * 0.4), Math.round(headY - headR * 0.8), 3, 5);
-    } else if (bk === 'ice') {
-      ctx.fillStyle = '#80deea';
-      ctx.beginPath();
-      ctx.moveTo(en.x - headR, headY - 1);
-      ctx.lineTo(en.x, headY - headR * 1.2);
-      ctx.lineTo(en.x + headR, headY - 1);
-      ctx.closePath();
-      ctx.fill();
-    } else if (bk === 'forest') {
-      ctx.fillStyle = '#4caf50';
-      ctx.beginPath();
-      ctx.arc(en.x, headY - headR * 0.8, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = orbCol;
-    ctx.shadowColor = orbCol;
-    ctx.shadowBlur = 6;
-    ctx.fillRect(Math.round(en.x - headR * 0.45), Math.round(headY), 2.5, 2.5);
-    ctx.fillRect(Math.round(en.x + headR * 0.2), Math.round(headY), 2.5, 2.5);
-    ctx.shadowBlur = 0;
-
-    const orbY = cy - en.r * 1.1 + Math.sin(time * 0.3) * 3;
-    ctx.shadowColor = orbCol;
-    ctx.shadowBlur = 8;
-    pixDisk(en.x, orbY, 4, '#ffffff', orbCol, shadeHex(orbCol, -50));
-    ctx.shadowBlur = 0;
-
-    ctx.restore();
-    return cy;
-  }
-
+  let role = 'swarmer';
   if (type === 'tank' || type === 'armored' || type === 'bearer' || type === 'walker') {
-    if (bk === 'sand') {
-      return drawCactusEnemy(ctx, en.x, en.y, en.r, en, time, fogged);
-    }
-    const lift = 4 + en.r * 0.12 + Math.abs(Math.sin(time * 0.18 + en.phase)) * 2;
-    const cy = en.y - lift;
-    drawGroundShadow(en.x + 2, en.y + en.r * 0.5, en.r * 1.12, en.r * 0.28);
-    if (fogged) { pixDisk(en.x, cy, en.r, '#102218', '#102218', '#0a140f'); return cy; }
-
-    ctx.save();
-    let bodyCol = bk === 'stone' ? '#78909c' : bk === 'lava' ? '#4e342e' : bk === 'forest' ? '#33691e' : bk === 'ice' ? '#90caf9' : bk === 'storm' ? '#3949ab' : bk === 'water' ? '#00838f' : '#424242';
-    let hiCol = shadeHex(bodyCol, 50);
-    let loCol = shadeHex(bodyCol, -50);
-    pixDisk(en.x, cy, en.r, hiCol, bodyCol, loCol);
-
-    ctx.fillStyle = bk === 'lava' ? '#ff3d00' : bk === 'stone' ? '#00e5ff' : bk === 'forest' ? '#76ff03' : bk === 'ice' ? '#e0f7fa' : '#ffd54f';
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 6;
-    ctx.fillRect(Math.round(en.x - en.r * 0.5), Math.round(cy - en.r * 0.15), Math.round(en.r * 1.0), 3.5);
-    ctx.shadowBlur = 0;
-
-    const shX = en.x + en.r * 0.9;
-    const shY = cy + en.r * 0.15;
-    ctx.fillStyle = loCol;
-    ctx.beginPath();
-    ctx.arc(shX, shY, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = hiCol;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.restore();
-    return cy;
+    role = 'heavy';
+  } else if (type === 'shooter' || type === 'shaman') {
+    role = 'caster';
+  } else if (type === 'fast' || type === 'exploder') {
+    role = 'rusher';
   }
 
-  if (type === 'exploder' || type === 'fast') {
-    if (bk === 'lava') {
-      return drawFlamewarEnemy(ctx, en.x, en.y, en.r, en, time, fogged);
-    }
-    const lift = 4 + en.r * 0.12 + Math.abs(Math.sin(time * 0.28 + en.phase)) * 2.8;
-    const cy = en.y - lift;
-    drawGroundShadow(en.x + 2, en.y + en.r * 0.5, en.r * 1.05, en.r * 0.25);
-    if (fogged) { pixDisk(en.x, cy, en.r, '#102218', '#102218', '#0a140f'); return cy; }
-
-    ctx.save();
-    let col = bk === 'ice' ? '#00e5ff' : bk === 'forest' ? '#aeea00' : bk === 'storm' ? '#ffd600' : bk === 'stone' ? '#ff6f00' : bk === 'water' ? '#00b0ff' : '#ab47bc';
-
-    const spkLen = en.r * 1.1 + Math.sin(time * 0.4 + en.phase) * (en.r * 0.25);
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(en.x - en.r * 0.8, cy - en.r * 0.2);
-    ctx.lineTo(en.x, cy - spkLen);
-    ctx.lineTo(en.x + en.r * 0.8, cy - en.r * 0.2);
-    ctx.closePath();
-    ctx.fill();
-
-    pixDisk(en.x, cy, en.r, shadeHex(col, 60), col, shadeHex(col, -60));
-
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 8;
-    ctx.fillRect(Math.round(en.x - en.r * 0.45), Math.round(cy - en.r * 0.12), Math.round(en.r * 0.9), 3);
-    ctx.shadowBlur = 0;
-
-    ctx.restore();
-    return cy;
+  // Lift & Ground Shadow computation
+  let lift = 4;
+  if (role === 'heavy') {
+    lift = 4 + en.r * 0.12 + Math.abs(Math.sin(time * 0.18 + en.phase)) * 2.2;
+    drawGroundShadow(en.x + 2, en.y + en.r * 0.5, en.r * 1.15, en.r * 0.3);
+  } else if (role === 'caster') {
+    lift = 5 + en.r * 0.16 + Math.abs(Math.sin(time * 0.22 + en.phase)) * 2.8;
+    drawGroundShadow(en.x + 2, en.y + en.r * 0.52, en.r * 1.05, en.r * 0.26);
+  } else if (role === 'rusher') {
+    lift = 4 + en.r * 0.12 + Math.abs(Math.sin(time * 0.32 + en.phase)) * 3.2;
+    drawGroundShadow(en.x + 2, en.y + en.r * 0.48, en.r * 1.05, en.r * 0.24);
+  } else {
+    // Swarmer / Slime
+    const squash = Math.sin(time * 0.28 + en.phase);
+    lift = 3 + Math.abs(squash) * 3.5;
+    drawGroundShadow(en.x + 2, en.y + en.r * 0.52, en.r * (1.18 + squash * 0.18), en.r * 0.28);
   }
 
-  // Slime / Default Archetype
-  const squash = Math.sin(time * 0.28 + en.phase);
-  const lift = 3 + Math.abs(squash) * 3.5;
   const cy = en.y - lift;
-  drawGroundShadow(en.x + 2, en.y + en.r * 0.52, en.r * (1.18 + squash * 0.18), en.r * 0.28);
-  if (fogged) { pixDisk(en.x, cy, en.r, '#102218', '#102218', '#0a140f'); return cy; }
+  if (fogged) {
+    pixDisk(en.x, cy, en.r, '#102218', '#102218', '#0a140f');
+    return cy;
+  }
 
-  let col = bk === 'forest' ? '#43a047' : bk === 'lava' ? '#ff5722' : bk === 'ice' ? '#4fc3f7' : bk === 'storm' ? '#ffd600' : bk === 'stone' ? '#78909c' : bk === 'night' ? '#8e24aa' : bk === 'sand' ? '#ffb300' : '#00acc1';
   ctx.save();
-  pixDisk(en.x, cy, en.r, shadeHex(col, 65), col, shadeHex(col, -65));
-
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.beginPath();
-  ctx.ellipse(en.x - en.r * 0.25, cy - en.r * 0.35, en.r * 0.45, en.r * 0.28, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  const sproutY = cy - en.r * 0.85 + Math.sin(time * 0.35 + en.phase) * 2;
-  ctx.fillStyle = shadeHex(col, 40);
-  ctx.beginPath();
-  ctx.arc(en.x, sproutY, Math.max(2, en.r * 0.24), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(Math.round(en.x - 1), Math.round(sproutY - 1), 1.5, 1.5);
-
-  const eyeXOff = en.r * 0.36;
-  const eyeY = cy - en.r * 0.08;
-  const eyeR = Math.max(3, en.r * 0.24);
-  ctx.fillStyle = '#102027';
-  ctx.beginPath();
-  ctx.arc(en.x - eyeXOff, eyeY, eyeR, 0, Math.PI * 2);
-  ctx.arc(en.x + eyeXOff, eyeY, eyeR, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = shadeHex(col, 80);
-  ctx.beginPath();
-  ctx.arc(en.x - eyeXOff, eyeY + 0.5, eyeR * 0.65, 0, Math.PI * 2);
-  ctx.arc(en.x + eyeXOff, eyeY + 0.5, eyeR * 0.65, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(en.x - eyeXOff - 1, eyeY - 1, eyeR * 0.45, 0, Math.PI * 2);
-  ctx.arc(en.x + eyeXOff - 1, eyeY - 1, eyeR * 0.45, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = bk === 'lava' ? 'rgba(255, 235, 59, 0.4)' : 'rgba(255, 64, 129, 0.4)';
-  ctx.beginPath();
-  ctx.ellipse(en.x - en.r * 0.62, cy + en.r * 0.22, 3, 1.8, 0, 0, Math.PI * 2);
-  ctx.ellipse(en.x + en.r * 0.62, cy + en.r * 0.22, 3, 1.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-
+  switch (bk) {
+    case 'stone':
+      drawStonePixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'lava':
+      drawLavaPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'ice':
+      drawIcePixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'storm':
+      drawStormPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'water':
+      drawWaterPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'forest':
+      drawForestPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'sand':
+      drawSandPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'night':
+      drawNightPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'pink':
+      drawPinkPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+    case 'ketchup':
+    default:
+      drawKetchupPixelEnemy(ctx, en, en.x, cy, en.r, role, time);
+      break;
+  }
   ctx.restore();
+
   return cy;
 }
 
@@ -13965,7 +14935,7 @@ syncSfxUi();
 pauseBtn.addEventListener('click', e => { e.stopPropagation(); togglePause(); });
 pauseBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); togglePause(); }, {passive:false});
 
-const BUILD_ID = '20260918e';
+const BUILD_ID = '20260918f';
 
 // Mobil Native Donanım Geri Tuşu (Android Back Button) Yönetimi
 function handleMobileBackButton() {

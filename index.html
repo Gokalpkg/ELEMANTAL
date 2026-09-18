@@ -1638,13 +1638,6 @@ try {
   Object.defineProperty(ctx, 'shadowBlur', { get() { return 0; }, set() {}, configurable: true });
   Object.defineProperty(ctx, 'shadowColor', { get() { return 'transparent'; }, set() {}, configurable: true });
 } catch (e) {}
-// Kill leftover service workers from old web/PWA builds
-if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
-  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
-}
-if (typeof caches !== 'undefined' && caches.keys) {
-  caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
-}
 ctx.imageSmoothingEnabled = false;
 if (ctx.webkitImageSmoothingEnabled != null) ctx.webkitImageSmoothingEnabled = false;
 const W = canvas.width, H = canvas.height;

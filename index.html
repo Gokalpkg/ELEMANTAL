@@ -734,7 +734,7 @@
   max-width: 360px;
   width: 100%;
 }
-.choice-row.grid-6 {
+.choice-row.grid-6, .choice-row.all-elements {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
   gap: 12px !important;
@@ -2481,16 +2481,16 @@ function applyClassNode(n) {
 function pickNodeCards(kind) {
   const taken = new Set((runLock && runLock.nodes) || []);
   const shuf = (arr) => shuffle(arr.slice());
-  if (kind === 'core') return shuf(CORE_NODES.filter(n => !taken.has(n.id))).slice(0, 3);
+  if (kind === 'core') return shuf(CORE_NODES.filter(n => !taken.has(n.id))).slice(0, 2);
   const cls = activeFusionClass() || 'stain';
   const clsPool = shuf((CLASS_NODES[cls] || CLASS_NODES.stain).filter(n => !taken.has(n.id)));
   const uni = shuf(UNIV_NODES.filter(n => !taken.has(n.id)));
   const cards = [];
   clsPool.forEach(n => { if (cards.length < 2) cards.push(n); });
-  if (uni[0]) cards.push(uni[0]);
+  if (cards.length < 2 && uni[0]) cards.push(uni[0]);
   const extra = shuf(CORE_NODES.filter(n => !taken.has(n.id) && cards.indexOf(n) < 0));
-  extra.forEach(n => { if (cards.length < 3) cards.push(n); });
-  return cards.slice(0, 3);
+  extra.forEach(n => { if (cards.length < 2) cards.push(n); });
+  return cards.slice(0, 2);
 }
 
 let runLock = { root: null, secondary: null, path: null, graft: null, forkDone: false, pickingSecondary: false, nodes: [], rootNodes: 0, flags: {} };
@@ -2928,8 +2928,8 @@ function pickNextBiome() {
   let pool = keys.filter(k => last.indexOf(k) < 0);
   if (!pool.length) pool = keys.filter(k => k !== last[last.length - 1]);
   if (!pool.length) pool = keys.slice();
-  if (biomeHist.length === 1 && pool.indexOf('pink') >= 0) return 'pink';
-  if (biomeHist.length === 2 && pool.indexOf('ketchup') >= 0) return 'ketchup';
+  if (biomeHist.length === 1 && pool.indexOf('ketchup') >= 0) return 'ketchup';
+  if (biomeHist.length === 2 && pool.indexOf('pink') >= 0) return 'pink';
   const gore = pool.filter(k => k === 'pink' || k === 'ketchup');
   if (gore.length && Math.random() < 0.38) return gore[(Math.random() * gore.length) | 0];
   return pool[(Math.random() * pool.length) | 0];
@@ -6686,22 +6686,17 @@ function update(dt, now) {
     weaveFires[i].life -= dt * 0.028;
     if (weaveFires[i].life <= 0) weaveFires.splice(i, 1);
   }
-  // Kullanıcı İsteği: Koşarken atış YOK! Koşarken sadece kaçış ve manevra.
-  // Durduğun salise odaklanıp seri ve güçlü yaylım ateşi açar!
+  // Vampire Survivors tarzı: Hareket ederken DE ateş eder, durunca daha hızlı ateş açar
   fireTimer -= dt;
-  if (!moving) {
-    if (fireTimer <= 0 && enemies.length) {
-      firePlayerProjectile();
-      const as = 1 - Math.min(0.24, flow * 0.0024);
-      const overchargeMod = modLv('overcharge') ? 0.65 : 1.0;
-      // Durunca odaklanmış seri yaylım ateşi
-      let iv = currentAuto().interval * as * 0.55 * overchargeMod;
-      if (typeof activeFusionClass === 'function' && activeFusionClass() === 'steam' && steamBand() === 'over') iv *= 0.7;
-      fireTimer = iv;
-    }
-  } else {
-    // Koşarken asla ateş etme; durduğun an hazır olması için sayacı sıfırda tut!
-    fireTimer = Math.min(fireTimer, 0);
+  if (fireTimer <= 0 && enemies.length) {
+    firePlayerProjectile();
+    const as = 1 - Math.min(0.24, flow * 0.0024);
+    const overchargeMod = modLv('overcharge') ? 0.65 : 1.0;
+    // Durunca odaklanmış seri ateş (0.55x), koşarken biraz yavaş (0.82x)
+    const moveMul = moving ? 0.82 : 0.55;
+    let iv = currentAuto().interval * as * moveMul * overchargeMod;
+    if (typeof activeFusionClass === 'function' && activeFusionClass() === 'steam' && steamBand() === 'over') iv *= 0.7;
+    fireTimer = iv;
   }
   updateCam(dt);
   const sh = modValue('shield');
@@ -7632,7 +7627,49 @@ function updateBossAi(en, dt, player, biome, now) {
       }
     }
   } else if (bk === 'water') {
-    // 6. Derinlik Lordu Leviathan
+    // 6. Derinlik Lordu Leviathan — Dalma & Çıkma Mekaniği
+    // Dive mechanic: boss submerges, chases player while invisible, erupts dealing damage
+    if (en.diveT && en.diveT > 0) {
+      en.diveT -= dt;
+      en.invulnerable = true;
+      en.submerged = true;
+      const dAng = Math.atan2(player.y - en.y, player.x - en.x);
+      const dSpd = en.phase2 ? 4.2 : 3.5;
+      tryMove(en, Math.cos(dAng) * dSpd * dt, Math.sin(dAng) * dSpd * dt);
+      // Underwater ripple trail
+      if (Math.random() < 0.5) {
+        burst(en.x + (Math.random()-0.5)*20, en.y + (Math.random()-0.5)*20, '#00b0ff', 2, 1.5);
+        particles.push({ x: en.x, y: en.y, r: 6, maxR: 30 + Math.random()*15, life: 0.5, color: '#00b0ff22', lw: 2 });
+      }
+      if (en.diveT <= 0) {
+        // ERUPTION! Boss surfaces with massive splash damage
+        en.invulnerable = false;
+        en.submerged = false;
+        burst(en.x, en.y, '#00b0ff', 32, 5.5);
+        burst(en.x, en.y, '#ffffff', 18, 3.8);
+        burst(en.x, en.y, '#26c6da', 24, 4.2);
+        shake = Math.max(shake, 18);
+        camKick = Math.max(camKick, 12);
+        particles.push({ x: en.x, y: en.y, r: 10, maxR: 120, life: 1.2, color: '#00b0ff', lw: 5 });
+        particles.push({ x: en.x, y: en.y, r: 6, maxR: 80, life: 0.8, color: '#ffffff', lw: 3 });
+        playSfx('explode', 0.4, 200);
+        triggerScreenFlash('#00b0ff', 0.25, 120);
+        spawnFloatText(en.x, en.y - 48, '💥 YÜZEYE ÇIKTI!', '#00e5ff', 'big');
+        // Splash damage zone
+        if (Math.hypot(player.x - en.x, player.y - en.y) < 80 + player.r) {
+          damagePlayer(en.phase2 ? 14 : 10);
+          player.vx += (player.x - en.x) * 0.08;
+          player.vy += (player.y - en.y) * 0.08;
+        }
+        // Leave a whirlpool at emergence point
+        zones.push({
+          x: en.x, y: en.y, r: en.phase2 ? 90 : 70,
+          life: 100, maxLife: 100, color: '#00b0ff', kind: 'pull', pull: en.phase2 ? 3.8 : 2.8, dmgTick: 0
+        });
+      }
+      softClamp(en);
+      return;
+    }
     if (en.specialCd <= 0) {
       en.specialCd = cdLimit;
       en.waterAlt = !en.waterAlt;
@@ -7644,26 +7681,13 @@ function updateBossAi(en, dt, player, biome, now) {
       en.squashT = 0.45;
       en.squashScale = 1.18;
       if (en.waterAlt) {
-        // Attack A: Abis Girdabı
-        spawnFloatText(en.x, en.y - 36, 'Abis Girdabı!', '#00b0ff');
-        playSfx('bubble', 0.28);
-        bossTelegraphs.push({
-          kind: 'circle', x: player.x, y: player.y, r: en.phase2 ? 100 : 85,
-          duration: 60, t: 0, color: '#00b0ff',
-          onTrigger: (bt) => {
-            burst(bt.x, bt.y, '#00b0ff', 24, 4.5);
-            burst(bt.x, bt.y, '#ffffff', 14, 3);
-            playSfx('wave', 0.32);
-            shake = Math.max(shake, 10);
-            zones.push({
-              x: bt.x, y: bt.y, r: bt.r,
-              life: 120, maxLife: 120, color: '#00b0ff', kind: 'pull', pull: en.phase2 ? 4.8 : 3.6, dmgTick: 0
-            });
-            if (Math.hypot(player.x - bt.x, player.y - bt.y) < bt.r) {
-              damagePlayer(en.phase2 ? 10 : 7);
-            }
-          }
-        });
+        // Attack A: Derinlere Dalış — Boss dalar, oyuncuyu takip eder, patlar!
+        spawnFloatText(en.x, en.y - 36, 'Derinlere Dalış!', '#00b0ff');
+        playSfx('bubble', 0.35);
+        burst(en.x, en.y, '#00b0ff', 20, 3.5);
+        burst(en.x, en.y, '#ffffff', 10, 2.5);
+        particles.push({ x: en.x, y: en.y, r: 8, maxR: 60, life: 0.6, color: '#00b0ff', lw: 4 });
+        en.diveT = en.phase2 ? 80 : 60; // frames underwater
       } else {
         // Attack B: Tsunami Dalgaları
         spawnFloatText(en.x, en.y - 36, 'Tsunami Dalgası!', '#26c6da');
@@ -10531,6 +10555,35 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
     ctx.beginPath();
     ctx.ellipse(x, y - 2, r * 0.65, r * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+    return y;
+  }
+
+  // If Water Boss (Leviathan) is diving underwater
+  if (en.submerged) {
+    ctx.save();
+    ctx.globalAlpha = 0.4 + Math.sin(time * 0.3) * 0.15;
+    ctx.fillStyle = '#00609966';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.1, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Animated concentric ripples
+    const rippleR = r * (0.8 + Math.sin(time * 0.15) * 0.3);
+    ctx.strokeStyle = '#00b0ff55';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rippleR, rippleR * 0.45, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#26c6da33';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rippleR * 1.4, rippleR * 0.6, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Danger indicator arrow pointing to boss
+    ctx.fillStyle = '#ff174488';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠ DALGIÇ', x, y - r * 0.6);
     ctx.restore();
     return y;
   }
@@ -13992,10 +14045,11 @@ function showLevelUp() {
   if (!row) { paused = false; return; }
   row.innerHTML = '';
 
-  // Exactly 2 elements offered per selection
+  // Oyun başında tüm elementleri göster, sonrasında 2 seçenek sun
   let allKeys = Object.keys(ELEMENTS);
-  let keys = shuffle(allKeys).slice(0, 2);
-  row.className = 'choice-row';
+  const isFirstPick = picksDone === 0 && !pendingElement;
+  let keys = isFirstPick ? shuffle(allKeys) : shuffle(allKeys).slice(0, 2);
+  row.className = 'choice-row' + (isFirstPick ? ' all-elements' : '');
 
   keys.forEach(k => {
     const e = ELEMENTS[k];

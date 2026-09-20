@@ -1335,20 +1335,8 @@ body.in-menu #bossHud {
       <div id="bossLayers"></div>
       <div class="bb"><div class="bf" id="bossFill"></div></div>
     </div>
-    <button type="button" id="ultFab" aria-label="Nihai Güç" style="display:none;">
-      <div class="ult-fill-ring" id="ultFillRing"></div>
-      <div class="ult-inner">
-        <span class="ult-icon">⚡</span>
-        <span class="ult-txt">NİHAİ</span>
-      </div>
-    </button>
-    <button type="button" id="dashFab" aria-label="Kaçın / Dash" style="display:none;">
-      <div class="dash-inner">
-        <span class="dash-icon">💨</span>
-        <span class="dash-txt">DASH</span>
-      </div>
-    </button>
     <div id="skillBar"></div>
+
 
     <div id="startOverlay" class="overlay show">
       <div class="menu-hero">
@@ -1697,8 +1685,61 @@ function generateBossWalkFrames(srcCanvas, bossKey) {
       fc.translate(-w / 2, -h / 2);
       fc.drawImage(srcCanvas, 0, 0);
       fc.restore();
+    } else if (bossKey === 'sand') {
+      // Çöl Akrebi / Behemoth (Multipedal Crawl & Stinger Sway)
+      const isDip = (f % 2 === 0);
+      const bobY = isDip ? 2 : -2;
+      const legOffset = ((f % 3) - 1) * 3.5;
+      fc.save();
+      fc.translate(w / 2, h / 2 + bobY);
+      fc.scale(isDip ? 1.03 : 0.98, isDip ? 0.97 : 1.02);
+      fc.translate(-w / 2, -h / 2);
+      // Main carapaced torso
+      fc.drawImage(srcCanvas, 0, 0);
+      // Side scuttling leg displacement
+      const sideW = Math.round(w * 0.28);
+      fc.drawImage(srcCanvas, 0, Math.round(h * 0.4), sideW, Math.round(h * 0.6), 0, Math.round(h * 0.4) + legOffset, sideW, Math.round(h * 0.6));
+      fc.drawImage(srcCanvas, w - sideW, Math.round(h * 0.4), sideW, Math.round(h * 0.6), w - sideW, Math.round(h * 0.4) - legOffset, sideW, Math.round(h * 0.6));
+      fc.restore();
+    } else if (bossKey === 'night') {
+      // Archon / Yarasa İblisi (Drifting Abyss Wing Flap & Shadow Pulse)
+      const flapY = Math.sin((f * Math.PI * 2) / 6) * 7;
+      const wingStretch = 1 + Math.sin((f * Math.PI * 2) / 6) * 0.08;
+      fc.save();
+      fc.translate(w / 2, h / 2 + flapY);
+      fc.scale(wingStretch, 1 / wingStretch);
+      fc.translate(-w / 2, -h / 2);
+      fc.drawImage(srcCanvas, 0, 0);
+      fc.restore();
+    } else if (bossKey === 'ketchup') {
+      // Sos Tyrant / Dev Salça Şişesi (Gelatinous Jiggle & Blob Surge)
+      const jiggleX = 1 + Math.sin((f * Math.PI * 2) / 6) * 0.09;
+      const jiggleY = 1 - Math.sin((f * Math.PI * 2) / 6) * 0.09;
+      const squishY = (f === 0 || f === 3) ? 4 : -2;
+      fc.save();
+      fc.translate(w / 2, h / 2 + squishY);
+      fc.scale(jiggleX, jiggleY);
+      fc.translate(-w / 2, -h / 2);
+      fc.drawImage(srcCanvas, 0, 0);
+      fc.restore();
+    } else if (bossKey === 'pink') {
+      // Şeker Diyarı Kraliçesi (Humanoid Empress - Elegant Floating Sway & Royal Step)
+      const sway = Math.sin((f * Math.PI * 2) / 6) * 0.035;
+      const floatBob = Math.sin((f * Math.PI * 2) / 6) * 3;
+      fc.save();
+      fc.translate(w / 2, h / 2 + floatBob);
+      fc.rotate(sway);
+      fc.translate(-w / 2, -h / 2);
+      const splitY = Math.round(h * 0.62);
+      fc.drawImage(srcCanvas, 0, 0, w, splitY, 0, 0, w, splitY);
+      const legW = Math.round(w / 2);
+      const lShift = (f === 0 || f === 1) ? 3 : -3;
+      const rShift = (f === 3 || f === 4) ? 3 : -3;
+      fc.drawImage(srcCanvas, 0, splitY, legW, h - splitY, 0, splitY + lShift, legW, h - splitY);
+      fc.drawImage(srcCanvas, legW, splitY, w - legW, h - splitY, legW, splitY + rShift, w - legW, h - splitY);
+      fc.restore();
     } else {
-      // Bipedal & Multipedal Bosses (Lava, Forest, Ice, Storm, Sand, Night, Pink, Ketchup)
+      // Bipedal & Multipedal Bosses (Lava, Forest, Ice, Storm)
       const isPlant = (f === 0 || f === 3);
       const isApex = (f === 2 || f === 5);
       const side = (f < 3) ? -1 : 1;
@@ -1990,20 +2031,20 @@ const BIOMES = [
   { key:'night', name:'Gece Harabesi', c0:'#0d0914', c1:'#07050b', accent:'#ab47bc' }
 ];
 const MOD_POOL = [
-  { id:'overcharge', name:'Hiper Tetik', emoji:'⚡', rarity:'rare', desc:'+%50 Saldırı Hızı ile mermileri makineli gibi yağdır!' },
-  { id:'bloodPact', name:'Kan Sözleşmesi', emoji:'🩸', rarity:'rare', desc:'+%60 Devasa Hasar artışı! Ancak can yenilenmesi durur.' },
-  { id:'multishot', name:'Üçlü Cehennem', emoji:'🏹', rarity:'legendary', desc:'Aynı anda 3 mermi birden ateşlenir, tüm ekranı tarar!' },
-  { id:'mirrorShield', name:'Ayna Kalkan', emoji:'🛡️', rarity:'legendary', desc:'Darbe aldığında hasarı geri püskürtür ve 1.5 sn dokunulmaz yapar!' },
-  { id:'timeDodge', name:'Zaman Bükücü', emoji:'⏳', rarity:'rare', desc:'Tehlikeli kaçışlarda zamanı 2 saniye yavaşlatır!' },
-  { id:'vortexPull', name:'Kozmik Girdap', emoji:'🌀', rarity:'rare', desc:'Düşmanları merkezine çekerek toplu imhaya hazırlar!' },
-  { id:'chainExplode', name:'Zincirleme İnfilak', emoji:'💥', rarity:'common', desc:'Ölen her düşman patlayarak yanındakilere şarapnel saçar!' },
-  { id:'midas', name:'Midas Dokunuşu', emoji:'💎', rarity:'legendary', desc:'Kristal ve XP kazancını 2 katına katlar!' },
-  { id:'leech', name:'Vampirik Öz', emoji:'🌿', rarity:'rare', desc:'Her başarılı isabette +3 Can emerek hayatta kal!' },
-  { id:'sniper', name:'Ölümcül Odak', emoji:'🎯', rarity:'rare', desc:'Hareketsiz durduğun anlarda tüm atışların %100 Kritik vurur!' },
-  { id:'antimatter', name:'Kozmik Delici', emoji:'🔮', rarity:'legendary', desc:'Mermilerin tüm düşman saflarını ve engelleri delip geçer!' },
-  { id:'resonance', name:'Elemental Rezonans', emoji:'🌈', rarity:'common', desc:'Sahip olduğun her aktif element için +%20 Ek Hasar!' },
-  { id:'tesla', name:'Tesla Bobini', emoji:'⚡', rarity:'rare', desc:'Her 3.5 saniyede etraftaki en yakın 3 hedefe yıldırım çarpar!' },
-  { id:'clover', name:'Uğurlu Yonca', emoji:'🍀', rarity:'common', desc:'+%30 Kristal kazancı ve şans çarpanı artışı!' }
+  { id:'overcharge', name:'Hiper Tetik', emoji:'⚡', rarity:'rare', desc:'+%75 Saldırı Hızı! Mermiler makineli tüfek gibi yağar ve her 3 vuruşta elektrik patlaması saçar.' },
+  { id:'bloodPact', name:'Kan Sözleşmesi', emoji:'🩸', rarity:'rare', desc:'+%90 Devasa Hasar patlaması! Düşmanları tek atışta parçalar.' },
+  { id:'multishot', name:'Beşli Yaylım', emoji:'🏹', rarity:'legendary', desc:'Aynı anda +2 ekstra mermi ile tüm savaş alanını mermi fırtınasına çevirir!' },
+  { id:'mirrorShield', name:'Kutsal Ayna Kalkanı', emoji:'🛡️', rarity:'legendary', desc:'Darbe aldığında hasarı %200 geri yansıtır ve 2.5 sn mutlak dokunulmazlık sağlar!' },
+  { id:'timeDodge', name:'Zaman Bükücü', emoji:'⏳', rarity:'rare', desc:'Yakınına düşman yaklaşınca zamanı 3 saniye dondurur ve hız kazandırır!' },
+  { id:'vortexPull', name:'Kozmik Kara Delik', emoji:'🌀', rarity:'rare', desc:'Her vuruşta düşmanları girdapla içine çeker ve toplu imha alanına sıkıştırır!' },
+  { id:'chainExplode', name:'Cehennem İnfilakı', emoji:'💥', rarity:'common', desc:'Ölen her düşman devasa bir alev bombası gibi patlayıp etrafı silip süpürür!' },
+  { id:'midas', name:'Midas Hazinesi', emoji:'💎', rarity:'legendary', desc:'Öldürülen her düşmandan ekstra Kristal ve 3 kat XP fışkırır!' },
+  { id:'leech', name:'Vampirik Hüküm', emoji:'🌿', rarity:'rare', desc:'Her isabette +6 Can ve Kalkan emerek ölümsüzlük hissi verir!' },
+  { id:'sniper', name:'Ölümcül Odak', emoji:'🎯', rarity:'rare', desc:'Hareketsiz kaldığında tüm vuruşların %100 Kritik hasarla 3 kat vurur!' },
+  { id:'antimatter', name:'Antimadde Işını', emoji:'🔮', rarity:'legendary', desc:'Mermilerin sınırsız delip geçer, boyut değiştirip arkadaki tüm düşmanları eritir!' },
+  { id:'resonance', name:'Elemental Senfoni', emoji:'🌈', rarity:'common', desc:'Sahip olduğun her aktif element için +%35 Genel Hasar çarpanı ekler!' },
+  { id:'tesla', name:'Tesla Şimşek Ağı', emoji:'⚡', rarity:'rare', desc:'Her 2.5 saniyede etraftaki en güçlü 4 düşmana ölümcül gök gürültüsü indirir!' },
+  { id:'clover', name:'Kader Yoncası', emoji:'🍀', rarity:'common', desc:'+%50 Kristal kazancı ve her düşmandan Can İksiri düşürme şansı!' }
 ];
 const SKILL_OFFER_LEVELS = [7, 13, 20];
 
@@ -2056,12 +2097,12 @@ function xpToNext(lv) {
 
 const AUTO_X = 250;
 const AUTO_BASE = {
-  fire:   { interval: 17, speed: 8.6, dmg: 6.0, r: 5.2, range: 250, effect: 'burn', specialEvery: 5, special: 'burst' },
-  water:  { interval: 22, speed: 8.4, dmg: 5.2, r: 5.6, range: 310, effect: 'slow', specialEvery: 4, special: 'freeze' },
-  earth:  { interval: 28, speed: 5.8, dmg: 8.4, r: 7.6, range: 215, effect: 'stun', specialEvery: 4, special: 'heavy' },
-  nature: { interval: 21, speed: 7.2, dmg: 4.7, r: 5.4, range: 265, effect: 'lifesteal', specialEvery: 4, special: 'sap' },
-  storm:  { interval: 15, speed: 10.8, dmg: 5.1, r: 4.0, range: 285, effect: 'shock', specialEvery: 4, special: 'chain' },
-  void:   { interval: 20, speed: 7.8, dmg: 7.0, r: 6.2, range: 255, effect: 'pull', specialEvery: 4, special: 'blackhole' }
+  fire:   { interval: 16, speed: 8.8, dmg: 7.6, r: 5.4, range: 260, effect: 'burn', specialEvery: 4, special: 'burst' },
+  water:  { interval: 20, speed: 8.6, dmg: 6.6, r: 5.8, range: 320, effect: 'slow', specialEvery: 4, special: 'freeze' },
+  earth:  { interval: 26, speed: 6.2, dmg: 10.8, r: 7.8, range: 230, effect: 'stun', specialEvery: 4, special: 'heavy' },
+  nature: { interval: 19, speed: 7.6, dmg: 6.2, r: 5.6, range: 275, effect: 'lifesteal', specialEvery: 4, special: 'sap' },
+  storm:  { interval: 14, speed: 11.2, dmg: 6.4, r: 4.2, range: 295, effect: 'shock', specialEvery: 4, special: 'chain' },
+  void:   { interval: 18, speed: 8.2, dmg: 8.8, r: 6.5, range: 270, effect: 'pull', specialEvery: 4, special: 'blackhole' }
 };
 const ENEMY_AUTO = {
   shooter: { range: 148, travel: 152, speed: 3.5, interval: 124, min: 96 },
@@ -2369,17 +2410,17 @@ const GRAFT_DEFS = {
 };
 
 const UNIV_NODES = [
-  { id: 'univArea', name: 'Alan', hint: 'Skill alani +%8' },
-  { id: 'univCd', name: 'Seri', hint: 'Skill CD -%6' },
-  { id: 'univHp', name: 'Cekirdek can', hint: 'Max can +8' },
-  { id: 'univMag', name: 'Cekim', hint: 'Toplama +12px' }
+  { id: 'univArea', name: 'Genişletilmiş Alan', hint: 'Yetenek etki alanı devasa +%20 artar!' },
+  { id: 'univCd', name: 'Seri Hazırlık', hint: 'Yetenek bekleme süresi -%16 hızlanır!' },
+  { id: 'univHp', name: 'Titanyum Gövde', hint: 'Maksimum Can +24 artar ve anında dolar!' },
+  { id: 'univMag', name: 'Manyetik Çekim', hint: 'Kristal ve XP toplama yarıçapı +35px genişler!' }
 ];
 const CORE_NODES = [
-  { id: 'coreInvest', name: 'Kok yatirimi', hint: 'Kok hasari +%8 (yigilir)' },
-  { id: 'coreTempo', name: 'Tempo', hint: 'Atis hizi +%8' },
-  { id: 'coreReach', name: 'Menzil', hint: 'Auto menzil +18' },
-  { id: 'coreHp', name: 'Dayan', hint: 'Max can +10' },
-  { id: 'coreFocus', name: 'Odak', hint: 'Ozel atis daha sik' }
+  { id: 'coreInvest', name: 'Elemental Kudret', hint: 'Temel element hasarın kalıcı +%25 güçlenir!' },
+  { id: 'coreTempo', name: 'Hızlı Tetik', hint: 'Tüm otomatik atışların hızı +%20 hızlanır!' },
+  { id: 'coreReach', name: 'Keskin Menzil', hint: 'Atış menzili +40px uzağa erişir!' },
+  { id: 'coreHp', name: 'Kaya Dayanıklılığı', hint: 'Maksimum Can +30 artar ve yenilenir!' },
+  { id: 'coreFocus', name: 'Özel Vuruş Odağı', hint: 'Her 3. atışta bir güçlü özel atış patlatır!' }
 ];
 const CLASS_NODES = {
   lava: [
@@ -2444,15 +2485,15 @@ function applyClassNode(n) {
   if (!runLock.nodes) runLock.nodes = [];
   const f = runLock.flags;
   const id = n.id;
-  if (id === 'univArea' || id === 'stoT2') player.mods.skillArea = (player.mods.skillArea || 0) + (id === 'stoT2' ? 16 : 8);
-  else if (id === 'univCd') player.mods.skillCd = (player.mods.skillCd || 0) + 6;
-  else if (id === 'univHp') { player.maxHp += 8; player.hp += 8; }
-  else if (id === 'univMag') f.magnetPx = (f.magnetPx || 0) + 12;
-  else if (id === 'coreInvest' || id === 'lavaT1' || id === 'stnT2') runLock.rootNodes = (runLock.rootNodes || 0) + 1;
-  else if (id === 'coreTempo') f.atkSpeed = (f.atkSpeed || 0) + 8;
-  else if (id === 'coreReach') player.mods.reach = (player.mods.reach || 0) + 18;
-  else if (id === 'coreHp') { player.maxHp += 10; player.hp += 10; }
-  else if (id === 'coreFocus' || id === 'lavaT2') f.specialEvery = Math.max(3, (f.specialEvery || 5) - 1);
+  if (id === 'univArea' || id === 'stoT2') player.mods.skillArea = (player.mods.skillArea || 0) + (id === 'stoT2' ? 24 : 20);
+  else if (id === 'univCd') player.mods.skillCd = (player.mods.skillCd || 0) + 16;
+  else if (id === 'univHp') { player.maxHp += 24; player.hp += 24; }
+  else if (id === 'univMag') f.magnetPx = (f.magnetPx || 0) + 35;
+  else if (id === 'coreInvest' || id === 'lavaT1' || id === 'stnT2') runLock.rootNodes = (runLock.rootNodes || 0) + 2;
+  else if (id === 'coreTempo') f.atkSpeed = (f.atkSpeed || 0) + 20;
+  else if (id === 'coreReach') player.mods.reach = (player.mods.reach || 0) + 40;
+  else if (id === 'coreHp') { player.maxHp += 30; player.hp += 30; }
+  else if (id === 'coreFocus' || id === 'lavaT2') f.specialEvery = 3;
   else if (id === 'oceanT1') f.freezeAt = 2;
   else if (id === 'oceanT2') f.waterSheet = 1;
   else if (id === 'thunT1') f.chainHops = (f.chainHops || 0) + 1;
@@ -3673,7 +3714,8 @@ const ENEMY_HP_MUL = 1.0;
 const ENEMY_DMG_MUL = 1.0;
 
 function makeEnemy(p, type, extra) {
-  const hpBase = type==='tank'||type==='armored' ? 44 :
+  const hpBase = type==='swarmer' ? 1 :
+                 type==='tank'||type==='armored' ? 44 :
                  type==='bearer' ? 36 :
                  type==='fast' ? 10 :
                  type==='shooter' ? 14 :
@@ -3683,15 +3725,16 @@ function makeEnemy(p, type, extra) {
                  type==='shaman' ? 28 :
                  type==='boss' ? 68 : 17;
   const hpScale = wave <= 3 ? 0.92 : wave <= 6 ? 1.0 : wave <= 10 ? 1.08 : 1.16;
-  let hp = Math.round((hpBase + Math.max(0, wave - 3) * 2.1) * hpScale);
+  let hp = type==='swarmer' ? 1 : Math.round((hpBase + Math.max(0, wave - 3) * 2.1) * hpScale);
   const curHpMul = getWaveHpMul(wave);
   if (extra && extra.hp != null) {
     hp = extra.hpFinal ? extra.hp : Math.round(extra.hp * curHpMul);
-  } else {
+  } else if (type !== 'swarmer') {
     hp = Math.round(hp * curHpMul);
   }
-  const r = type==='tank'?24: type==='armored'?23: type==='bearer'?22: type==='fast'?9.5: type==='shooter'?13: type==='exploder'?14: type==='slime'?17: type==='leech'?12: type==='shaman'?16: type==='boss'?32:14.5;
-  const spd = ((type==='fast'?1.85:
+  const r = type==='swarmer'?8.5: type==='tank'?24: type==='armored'?23: type==='bearer'?22: type==='fast'?9.5: type==='shooter'?13: type==='exploder'?14: type==='slime'?17: type==='leech'?12: type==='shaman'?16: type==='boss'?32:14.5;
+  const spd = ((type==='swarmer'?1.65:
+                type==='fast'?1.85:
                 type==='tank'?0.42:
                 type==='armored'?0.46:
                 type==='bearer'?0.48:
@@ -3739,6 +3782,7 @@ let wave, running, paused, menuOpen, waveTimer, shake, time, score, biomeIndex, 
 let pickHistory, lockedCombos, pendingElement, skillState, skillUiKey, pendingRewards, rerollsLeft, continuesLeft, spawnMinDist;
 let joyActive, joyAnchor, joyVec, lastTime, fireTimer, wasMoving, shotCount;
 let mirrorCd = 0, timeDodgeTimer = 0, overchargeCount = 0;
+let swarmTimer = 0;
 let echoUnlocked = false;
 let skill2Unlocked = false;
 let selectedKit = 'balanced';
@@ -3760,7 +3804,7 @@ const ultFab = document.getElementById('ultFab');
 function emptyState() {
   if (typeof statusStore !== 'undefined') statusStore.clearAll();
   originX = 0; originY = 0; MAP_W = 2800; MAP_H = 3200;
-  player = { x:originX + MAP_W/2, y:originY + MAP_H/2, r:16, hp:128, maxHp:128, speed:3.18, invuln:0, moving:false, vx:0, vy:0, facing: -Math.PI/2, mods:{ atkSpeed:0, dmg:0, shield:0, move:0, vamp:0, magnet:0, skillDur:0, haste:0, rock:0, pierce:0, crit:0, skillCd:0, skillArea:0, ember:0, wide:0, reflect:0, greedy:0 }, level:1, xp:0, xpNeed: xpToNext(1), slowUntil:0 };
+  player = { x:originX + MAP_W/2, y:originY + MAP_H/2, r:16, hp:148, maxHp:148, speed:3.38, invuln:0, moving:false, vx:0, vy:0, facing: -Math.PI/2, mods:{ atkSpeed:0, dmg:0, shield:0, move:0, vamp:0, magnet:0, skillDur:0, haste:0, rock:0, pierce:0, crit:0, skillCd:0, skillArea:0, ember:0, wide:0, reflect:0, greedy:0 }, level:1, xp:0, xpNeed: xpToNext(1), slowUntil:0 };
   lookFx = [];
   stains = [];
   groundMarks = [];
@@ -3773,7 +3817,7 @@ function emptyState() {
   elemStains = []; winds = []; altar = null; overchargeEl = null; playerSig = null;
   pactEl = null; pactHave = 0; pactArmed = false;
   fxStats = { burn:0, stun:0, exec:0, steam:0, volt:0, grass:0 };
-  skillSeq = []; breathLeft = 0; trapTick = 0; altarAggro = false;
+  skillSeq = []; breathLeft = 0; trapTick = 0; altarAggro = false; swarmTimer = 0;
   playerBuff = { as:0, until:0 };
   bossSplash = null;
   ultEnergy = 0;
@@ -4097,7 +4141,7 @@ function getBiomeBossConfig(biomeKey, wave) {
 
 function spawnWave() {
   const biome = currentBiome();
-  const count = (wave <= 2 ? 3 : wave <= 5 ? 4 : wave <= 9 ? 5 : Math.min(6 + Math.floor((wave-9)*0.55), 11)) + (wagerHard ? 2 : 0);
+  const count = (wave <= 2 ? 5 : wave <= 5 ? 7 : wave <= 9 ? 9 : Math.min(10 + Math.floor((wave-9)*0.7), 16)) + (wagerHard ? 3 : 0);
   const shooterChance = wave >= 4 ? Math.min(0.05 + (wave-4)*0.018, 0.28) : 0;
   const fastChance = wave >= 4 ? Math.min(0.05 + wave*0.01, 0.18) : 0;
   const tankChance = wave >= 7 ? Math.min(0.04 + wave*0.008, 0.16) : 0;
@@ -4162,11 +4206,11 @@ function spawnWave() {
     let type;
     // Zengin ve tiplemesi belirgin düşman havuzu (Kaktüs Şövalye, Vampir Büyücü, Alev Savaşçısı, Sevimli Balçık)
     if (wave === 1) {
-      type = roll < 0.5 ? 'tank' : 'slime';
+      type = roll < 0.4 ? 'swarmer' : roll < 0.7 ? 'slime' : 'tank';
     } else if (wave <= 3) {
-      type = roll < 0.35 ? 'tank' : roll < 0.65 ? 'shooter' : roll < 0.85 ? 'exploder' : 'slime';
+      type = roll < 0.35 ? 'swarmer' : roll < 0.55 ? 'tank' : roll < 0.75 ? 'shooter' : roll < 0.88 ? 'exploder' : 'slime';
     } else {
-      type = roll < 0.28 ? 'tank' : roll < 0.52 ? 'shooter' : roll < 0.74 ? 'exploder' : roll < 0.88 ? 'fast' : 'slime';
+      type = roll < 0.35 ? 'swarmer' : roll < 0.52 ? 'tank' : roll < 0.70 ? 'shooter' : roll < 0.84 ? 'exploder' : roll < 0.92 ? 'fast' : 'slime';
     }
     const extra = {};
     if (Math.random() < shieldChance) {
@@ -5114,40 +5158,15 @@ function updateWeave() {
 }
 
 function recordEcho(fired) {
-  const last = echoTape[echoTape.length - 1];
-  if (!fired && last && time - last.t < 4) return;
-  echoTape.push({ t: time, x: player.x, y: player.y, facing: player.facing, fire: !!fired });
-  const cut = time - 600;
-  while (echoTape.length && echoTape[0].t < cut) echoTape.shift();
-  if (echoTape.length > 180) echoTape.shift();
+  // KALDIRILDI: Yankı devre dışı
+  return;
 }
 function tryEcho() {
-  if (!running || paused || menuOpen) return;
-  if (!echoUnlocked) {
-    spawnFloatText(player.x, player.y - 28, 'Yankı kilitli · Dalga 3', '#c084fc');
-    playSfx('hit', 0.25);
-    vibrate([20]);
-    return;
-  }
-  if (echoCd > 0) {
-    spawnFloatText(player.x, player.y - 24, 'Yankı doluyor', '#c9b6ff');
-    return;
-  }
-  if (echoTape.length < 28) {
-    spawnFloatText(player.x, player.y - 24, 'Kayıt kısa', '#c9b6ff');
-    return;
-  }
-  echoGhost = { tape: echoTape.map(s => Object.assign({}, s)), i: 0, life: 0, x: player.x, y: player.y, facing: player.facing };
-  echoCd = 20 * 60;
-  runStats.echo++;
-  addFlow(11, 'Yankı');
-  camKick = Math.max(camKick, 6);
-  spawnFloatText(player.x, player.y - 40, 'Yankı!', '#c9b6ff');
-  burst(player.x, player.y, '#9b7dff', 14, 3);
-  playSfx('skill', 0.28);
-  vibrate([12, 20, 12]);
-  refreshSkillUI(true);
+  // KALDIRILDI: Yankı devre dışı
+  return;
 }
+
+
 function fireGhostShot(s) {
   const auto = currentAuto();
   let best = null, bd = Infinity;
@@ -5348,14 +5367,6 @@ function buildSkillButtons() {
     btn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); tryUseSkill(i); });
     skillBar.appendChild(btn);
   }
-  const echoBtn = document.createElement('button');
-  echoBtn.type = 'button';
-  echoBtn.className = 'skill-btn echo';
-  echoBtn.id = 'echoBtn';
-  echoBtn.innerHTML = `<div class="sk-fill"></div><span class="sk-icon">👤</span><span class="sk-how">Yankı</span><span class="sk-timer"></span>`;
-  echoBtn.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); tryEcho(); }, {passive:false});
-  echoBtn.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); tryEcho(); });
-  skillBar.appendChild(echoBtn);
   refreshSkillUI(true);
 }
 
@@ -5421,28 +5432,6 @@ function refreshSkillUI(force) {
       timer.textContent = Math.ceil((1-pct) * (combo.cd/60)) + 's';
     }
   });
-  const echoBtn = document.getElementById('echoBtn');
-  if (echoBtn) {
-    const fillE = echoBtn.querySelector('.sk-fill');
-    const timerE = echoBtn.querySelector('.sk-timer');
-    echoBtn.classList.remove('ready', 'locked');
-    if (!echoUnlocked) {
-      echoBtn.classList.add('locked');
-      if (timerE) timerE.textContent = '🔒 D.3';
-      if (fillE) fillE.style.height = '0%';
-    } else {
-      const ready = echoCd <= 0 && echoTape.length >= 28;
-      const pctE = echoCd <= 0 ? 1 : Math.max(0, 1 - echoCd / (20 * 60));
-      if (fillE) fillE.style.height = (pctE * 100) + '%';
-      if (ready) {
-        echoBtn.classList.add('ready');
-        if (timerE) timerE.textContent = 'YANKI!';
-      } else {
-        echoBtn.classList.add('locked');
-        if (timerE) timerE.textContent = echoCd > 0 ? Math.ceil(echoCd / 60) + 's' : 'kayıt';
-      }
-    }
-  }
 }
 
 function tryUseSkill(slot) {
@@ -6000,106 +5989,28 @@ function pruneDeadEnemies() {
 }
 
 function syncUltFab() {
+  // KALDIRILDI: Nihai yetenek devre dışı
   syncDashFab();
-  if (!ultFab) return;
-  if (!running || menuOpen || paused || (typeof overlayBusy === 'function' && overlayBusy())) {
-    ultFab.style.display = 'none';
-    return;
-  }
-  ultFab.style.display = 'flex';
-  const ready = ultEnergy >= MAX_ULT_ENERGY;
-  ultFab.classList.toggle('ready', ready);
-  const ring = document.getElementById('ultFillRing');
-  if (ring) {
-    const pct = Math.min(100, (ultEnergy / MAX_ULT_ENERGY) * 100);
-    ring.style.background = `conic-gradient(#ffd700 ${pct}%, rgba(255,255,255,0.08) ${pct}%)`;
-  }
+  if (ultFab) ultFab.style.display = 'none';
 }
 
 const dashFab = document.getElementById('dashFab');
 function syncDashFab() {
-  if (!dashFab) return;
-  if (!running || menuOpen || paused || (typeof overlayBusy === 'function' && overlayBusy())) {
-    dashFab.style.display = 'none';
-    return;
-  }
-  dashFab.style.display = 'flex';
-  const onCd = player && player.dashCd > 0;
-  dashFab.classList.toggle('cooldown', onCd);
+  // KALDIRILDI: Dash özelliği devre dışı
+  if (dashFab) dashFab.style.display = 'none';
 }
 
 function triggerDash() {
-  if (!running || paused || menuOpen || !player || player.hp <= 0) return;
-  if (player.dashCd && player.dashCd > 0) return;
-  player.dashTime = 220;
-  player.dashCd = 1600;
-  let dx = joyVec.x;
-  let dy = joyVec.y;
-  let mag = Math.hypot(dx, dy);
-  if (mag > 0.1) {
-    player.dashDirX = dx / mag;
-    player.dashDirY = dy / mag;
-  } else {
-    player.dashDirX = Math.cos(player.facing);
-    player.dashDirY = Math.sin(player.facing);
-  }
-  player.invuln = Math.max(player.invuln, 16);
-  triggerHitStop(25);
-  shake = Math.max(shake, 4);
-  vibrate([25]);
-  playSfx('skill', 0.28, 480);
-  burst(player.x, player.y, '#c084fc', 14, 3);
-  particles.push({ x: player.x, y: player.y, r: 8, maxR: 48, life: 0.35, color: '#c084fc', lw: 2.5 });
-  spawnFloatText(player.x, player.y - 28, 'DASH!', '#e9d5ff');
-  syncDashFab();
+  // KALDIRILDI: Dash özelliği devre dışı
+  return;
 }
 
 function triggerUltimate() {
-  if (ultEnergy < MAX_ULT_ENERGY || !running || paused) return;
-  ultEnergy = 0;
-  syncUltFab();
-  
-  // Cinematic slow-motion & screen impact
-  timeDodgeTimer = 75; // slow down world briefly
-  player.invuln = Math.max(player.invuln, 90);
-  shake = Math.max(shake, 24);
-  camKick = Math.max(camKick, 16);
-  triggerHitStop(60);
-  triggerScreenFlash('#ffd700', 0.5, 260);
-  vibrate([50, 70, 50, 90, 60]);
-  playSfx('explode', 0.48, 160);
-
-  const roots = autoRoots();
-  const primaryEl = roots[0] || 'fire';
-  const elCfg = ELEMENTS[primaryEl] || ELEMENTS.fire;
-
-  spawnFloatText(player.x, player.y - 52, '⚡ NİHAİ GAZAP: ' + elCfg.name.toUpperCase() + '! ⚡', '#ffd700', 'big');
-  showStreakBanner('⚡ NİHAİ GAZAP PATLADI! ⚡', '#ffd700');
-
-  // Devasa Şok Dalgası
-  particles.push({ x: player.x, y: player.y, r: 20, maxR: 260, life: 1.4, color: '#ffd700', lw: 8 });
-  particles.push({ x: player.x, y: player.y, r: 10, maxR: 180, life: 1.1, color: '#ffffff', lw: 5 });
-  burst(player.x, player.y, elCfg.color, 36, 6.0);
-  burst(player.x, player.y, '#ffffff', 24, 4.5);
-
-  // Haritadaki canavarları silip süpüren elementel afet
-  enemies.forEach(en => {
-    const d = Math.hypot(en.x - player.x, en.y - player.y);
-    if (d <= 280) {
-      addBolt(player.x, player.y, en.x, en.y, elCfg.color, 0.65, 5.0);
-      const ultDmg = Math.max(45, Math.round(en.maxHp * 0.55));
-      takeDamage(en, ultDmg, primaryEl);
-      punchEnemy(en, player.x, player.y, 22, true);
-      applyEffect(en, primaryEl === 'water' ? 'slow' : primaryEl === 'nature' ? 'lifesteal' : primaryEl === 'storm' ? 'shock' : 'burn', 2.0);
-      spawnFloatText(en.x, en.y - 12, '💥 -' + ultDmg, '#ffd700', 'crit');
-    }
-  });
-
-  // Mermileri temizle
-  enemyProjectiles = [];
-  pruneDeadEnemies();
-  updateHud();
+  // KALDIRILDI: Nihai yetenek devre dışı
+  return;
 }
+
+
 
 let joyTouchId = null;
 let cachedCanvasRect = null;
@@ -6315,13 +6226,12 @@ function firePlayerProjectile() {
     const off = n > 1 ? (i - (n - 1) / 2) * 0.16 : 0;
     const ang = baseAngle + off;
     const fusedKey = sh.fuse || auto.fuseKey;
-    let packDmg = sh.dmg || auto.dmg;
-    if (modLv('bloodPact')) packDmg = Math.round(packDmg * 1.6);
+    if (modLv('bloodPact')) packDmg = Math.round(packDmg * 1.9);
     if (modLv('resonance')) {
       const unCount = new Set(autoRoots()).size;
-      packDmg = Math.round(packDmg * (1 + unCount * 0.20));
+      packDmg = Math.round(packDmg * (1 + unCount * 0.35));
     }
-    if (isSniperStance) packDmg = Math.round(packDmg * 2.2);
+    if (isSniperStance) packDmg = Math.round(packDmg * 3.0);
     const packColor = isSniperStance ? '#ffd740' : (modLv('antimatter') ? '#c084fc' : sh.color);
     const pack = {
       speed: sh.speed, r: sh.r, dmg: packDmg, color: packColor,
@@ -6338,8 +6248,10 @@ function firePlayerProjectile() {
     if (volleyAmbush > 1) pack.ambushMul = volleyAmbush;
     if (streakOn) { pack.color = '#ffd740'; pack.dmg = Math.round(pack.dmg * 1.24); pack.r = (sh.r || auto.r) + 1.4; }
     if (modLv('multishot') && i === 0 && !isSpecial) {
-      pushAutoShot(ang - 0.22, auto, { ...pack, dmg: Math.round(pack.dmg * 0.85) });
-      pushAutoShot(ang + 0.22, auto, { ...pack, dmg: Math.round(pack.dmg * 0.85) });
+      pushAutoShot(ang - 0.25, auto, { ...pack, dmg: Math.round(pack.dmg * 0.9) });
+      pushAutoShot(ang + 0.25, auto, { ...pack, dmg: Math.round(pack.dmg * 0.9) });
+      pushAutoShot(ang - 0.45, auto, { ...pack, dmg: Math.round(pack.dmg * 0.75) });
+      pushAutoShot(ang + 0.45, auto, { ...pack, dmg: Math.round(pack.dmg * 0.75) });
     }
 
     if (i === 0 && isSpecial && auto.special === 'burst') {
@@ -6715,28 +6627,22 @@ function update(dt, now) {
   if (timeDodgeTimer > 0) timeDodgeTimer -= dt;
   if (modLv('tesla') && enemies.length > 0) {
     teslaTimer += dt;
-    if (teslaTimer >= 210) { // ~3.5 saniyede bir
+    if (teslaTimer >= 150) { // ~2.5 saniyede bir
       teslaTimer = 0;
-      let highestEn = null, maxHp = -1;
-      for (let j = 0; j < enemies.length; j++) {
-        const en = enemies[j];
-        const d = Math.hypot(en.x - player.x, en.y - player.y);
-        if (d <= 270 && en.hp > maxHp) {
-          maxHp = en.hp;
-          highestEn = en;
+      const sortedEn = enemies.slice().sort((a,b) => Math.hypot(a.x-player.x, a.y-player.y) - Math.hypot(b.x-player.x, b.y-player.y)).slice(0, 4);
+      sortedEn.forEach(en => {
+        if (Math.hypot(en.x - player.x, en.y - player.y) <= 300) {
+          addBolt(player.x, player.y - 12, en.x, en.y, '#ffd700', 0.6, 5);
+          burst(en.x, en.y, '#ffd700', 12, 3.0);
+          const tDmg = takeDamage(en, 65, 'storm');
+          punchEnemy(en, player.x, player.y, 14, true);
+          applyEffect(en, 'shock', 2.0);
+          spawnFloatText(en.x, en.y - 16, '⚡ -' + tDmg, '#ffd700', 'crit');
         }
-      }
-      if (highestEn) {
-        addBolt(player.x, player.y - 12, highestEn.x, highestEn.y, '#ffd700', 0.6, 5);
-        burst(highestEn.x, highestEn.y, '#ffd700', 14, 3.5);
-        const tDmg = takeDamage(highestEn, 45, 'storm');
-        punchEnemy(highestEn, player.x, player.y, 16, true);
-        applyEffect(highestEn, 'shock', 1.5);
-        spawnFloatText(highestEn.x, highestEn.y - 16, '⚡ -' + tDmg, '#ffd700', 'crit');
-        playSfx('skill', 0.28, 620);
-        vibrate([25, 30, 25]);
-        pruneDeadEnemies();
-      }
+      });
+      playSfx('skill', 0.32, 620);
+      vibrate([25, 30, 25]);
+      pruneDeadEnemies();
     }
   }
   const rg = (modLv('bloodPact') ? 0 : ((modValue('regen') || 0) * synMul('regen', 0.5)));
@@ -6883,6 +6789,25 @@ function update(dt, now) {
     if (p.y < originY - 8) { p.y = originY + MAP_H + 8; p.x = originX + Math.random()*MAP_W; }
   });
 
+  // Sürekli Gelen Tek Atımlık Canavar Sürüsü (Vampire Survivors Swarm)
+  // Ekranı dolduran, tek vuruşta patlayan dinamik sürüler
+  if (running && !paused && !menuOpen && enemies.length < 32 && player.hp > 0) {
+    swarmTimer = (swarmTimer || 0) + dt;
+    const swarmInterval = wave <= 3 ? 90 : wave <= 6 ? 65 : 45; // 1-1.5 saniyede bir
+    if (swarmTimer >= swarmInterval) {
+      swarmTimer = 0;
+      const spawnCount = wave <= 2 ? 2 : wave <= 5 ? 3 : 4;
+      for (let s = 0; s < spawnCount; s++) {
+        if (enemies.length >= 35) break;
+        const spAng = Math.random() * Math.PI * 2;
+        const spDist = 180 + Math.random() * 80;
+        const sx = clampWorldX(player.x + Math.cos(spAng) * spDist, 24);
+        const sy = clampWorldY(player.y + Math.sin(spAng) * spDist, 24);
+        makeEnemy({ x: sx, y: sy }, 'swarmer');
+      }
+    }
+  }
+
   for (let i=particles.length-1;i>=0;i--) {
     const pt = particles[i];
     pt.r += (pt.maxR-pt.r) * 0.2 * dt;
@@ -7024,12 +6949,12 @@ function update(dt, now) {
           triggerScreenFlash('#ffd740', 0.18, 70);
         }
         if (modLv('leech')) {
-          player.hp = Math.min(player.maxHp, player.hp + 3);
-          shieldOn = Math.min(45, (shieldOn || 0) + 4);
+          player.hp = Math.min(player.maxHp, player.hp + 6);
+          shieldOn = Math.min(80, (shieldOn || 0) + 8);
           updateHud();
         }
-        if (modLv('vortexPull') && Math.random() < 0.6) {
-          zones.push({ x: en.x, y: en.y, r: 85, life: 80, maxLife: 80, color: '#a855f7', kind: 'pull', pull: 5.2, dmgTick: 0 });
+        if (modLv('vortexPull') && Math.random() < 0.8) {
+          zones.push({ x: en.x, y: en.y, r: 110, life: 90, maxLife: 90, color: '#a855f7', kind: 'pull', pull: 6.5, dmgTick: 0 });
         }
         if (!p.hit) p.hit = new Set();
         p.hit.add(en);
@@ -8041,7 +7966,7 @@ function updateBossAi(en, dt, player, biome, now) {
         r: 2.5, life: 18, maxLife: 18, color: Math.random() < 0.5 ? '#ff5722' : '#ffeb3b'
       });
     }
-    const melee = (en.type === 'walker' || en.type === 'fast' || en.type === 'tank'
+    const melee = (en.type === 'swarmer' || en.type === 'walker' || en.type === 'fast' || en.type === 'tank'
       || en.type === 'exploder' || en.type === 'slime' || en.type === 'leech' || en.type === 'armored'
       || en.type === 'bearer' || (en.type === 'shaman' && !en.summoned));
     if (melee) {
@@ -8050,18 +7975,19 @@ function updateBossAi(en, dt, player, biome, now) {
       if (dist < reach) {
         en.hitCooldown -= dt;
         if (en.hitCooldown <= 0) {
-          let md = en.type==='tank'||en.type==='armored'||en.type==='bearer' ? (wave <= 5 ? 5 : wave <= 9 ? 7 : 9) :
+          let md = en.type==='swarmer' ? (wave <= 5 ? 2 : 3) :
+                   en.type==='tank'||en.type==='armored'||en.type==='bearer' ? (wave <= 5 ? 5 : wave <= 9 ? 7 : 9) :
                    en.type==='fast' ? (wave <= 5 ? 2 : wave <= 9 ? 3 : 4) :
                    en.type==='exploder' ? 6 :
                    en.type==='leech' ? 4 : (wave <= 6 ? 3 : wave <= 10 ? 4 : 5);
-          setDeathReason(en.type==='boss' ? 'Boss darbesi' : (en.isElite ? 'Elit canavar' : (en.type==='fast' ? 'Hızlı düşman' : 'Yakın hasar')));
+          setDeathReason(en.type==='boss' ? 'Boss darbesi' : (en.isElite ? 'Elit canavar' : (en.type==='fast'||en.type==='swarmer' ? 'Hızlı düşman' : 'Yakın hasar')));
           damagePlayer(md);
           if (en.type==='slime') player.slowUntil = performance.now() + 1100;
           if (en.type==='leech') {
             en.hp = Math.min(en.maxHp, en.hp + 6);
             en.r = Math.min(22, en.r + 1.5);
           }
-          en.hitCooldown = en.type === 'fast' ? 36 : 58;
+          en.hitCooldown = (en.type === 'fast' || en.type === 'swarmer') ? 36 : 58;
         }
       }
     }
@@ -10675,6 +10601,22 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
       // Leviathan serpentine undulation
       walkBob = Math.sin(time * 0.2) * 3.5;
       walkTilt = Math.sin(time * 0.15) * 0.04;
+    } else if (bk === 'sand') {
+      // Çöl Akrebi / Behemoth (Low scuttling crawl)
+      walkBob = Math.sin(walkTimer * 3.2) * 1.2;
+      walkTilt = Math.sin(walkTimer * 1.6) * 0.025;
+    } else if (bk === 'night') {
+      // Karanlık Archon (Hovering drifter with wing flaps)
+      walkBob = Math.sin(time * 0.25) * 4.5;
+      walkTilt = (facingLeft ? -0.05 : 0.05) + Math.sin(time * 0.2) * 0.03;
+    } else if (bk === 'ketchup') {
+      // Sos Tyrant (Heavy gelatinous squish and bounce)
+      walkBob = Math.abs(Math.sin(walkTimer * 2.2)) * 3.8 - 1.5;
+      walkTilt = Math.sin(walkTimer * 1.8) * 0.045;
+    } else if (bk === 'pink') {
+      // Şeker Kraliçesi (Graceful regal float)
+      walkBob = Math.sin(time * 0.22) * 2.8;
+      walkTilt = Math.sin(time * 0.18) * 0.025;
     } else {
       // Bipedal bosses: foot plant bounce & weight transfer
       const isPlant = (frameIdx === 0 || frameIdx === 3);
@@ -10682,41 +10624,85 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
       walkTilt = (facingLeft ? -1 : 1) * ((frameIdx % 2 === 0) ? -0.04 : 0.04);
     }
 
-    // Stone Titan: Bedrock plowing wake under sliding base (Lissandra style)
+    // Dynamic Ground-Interacting Base and Emerging Terrain System
     if (isStone) {
       ctx.save();
       const wakeDir = facingLeft ? 1 : -1;
+      const walkT = en.walkTimer || (time * 0.15);
+      const groundPulse = 1 + Math.sin(walkT * 2.8) * 0.12;
+
       // Subterranean glowing tectonic crust rupture
-      const wakeG = ctx.createRadialGradient(x, y + r * 0.35, r * 0.15, x, y + r * 0.35, r * 1.6);
-      wakeG.addColorStop(0, 'rgba(255, 183, 77, 0.5)');
-      wakeG.addColorStop(0.5, 'rgba(109, 76, 65, 0.45)');
+      const wakeG = ctx.createRadialGradient(x, y + r * 0.35, r * 0.15, x, y + r * 0.35, r * 1.8 * groundPulse);
+      wakeG.addColorStop(0, 'rgba(255, 183, 77, 0.65)');
+      wakeG.addColorStop(0.4, 'rgba(121, 85, 72, 0.55)');
+      wakeG.addColorStop(0.75, 'rgba(62, 39, 35, 0.4)');
       wakeG.addColorStop(1, 'transparent');
       ctx.fillStyle = wakeG;
       ctx.beginPath();
-      ctx.ellipse(x, y + r * 0.35, r * 1.6, r * 0.48, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y + r * 0.36, r * 1.8 * groundPulse, r * 0.52 * groundPulse, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Fractured jagged rock plates forming the emerging plinth base
-      ctx.fillStyle = '#4e342e';
+      ctx.fillStyle = '#3e2723';
       ctx.beginPath();
-      ctx.ellipse(x, y + r * 0.38, r * 1.15, r * 0.32, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y + r * 0.38, r * 1.35 * groundPulse, r * 0.38 * groundPulse, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#271711';
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#1b0000';
+      ctx.lineWidth = 2.4;
       ctx.stroke();
 
-      // Glowing fissure lines cutting through the bedrock
+      // Dynamic animated ground fissures crawling along the earth with the boss
+      const fOff1 = Math.sin(walkT * 2.2) * (r * 0.2);
+      const fOff2 = Math.cos(walkT * 2.2) * (r * 0.2);
       ctx.strokeStyle = '#ffb74d';
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = 2.5;
       ctx.shadowColor = '#ff9800';
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
       ctx.beginPath();
-      ctx.moveTo(x - wakeDir * r * 0.9, y + r * 0.38);
-      ctx.lineTo(x + wakeDir * r * 0.4, y + r * 0.4);
-      ctx.moveTo(x - wakeDir * r * 0.5, y + r * 0.32);
-      ctx.lineTo(x + wakeDir * r * 0.8, y + r * 0.35);
+      ctx.moveTo(x - wakeDir * r * 1.1 + fOff1, y + r * 0.38);
+      ctx.lineTo(x + wakeDir * r * 0.3, y + r * 0.42 + fOff2 * 0.3);
+      ctx.lineTo(x + wakeDir * r * 0.9 + fOff2, y + r * 0.36);
+      ctx.moveTo(x - wakeDir * r * 0.6, y + r * 0.32 + fOff1 * 0.4);
+      ctx.lineTo(x + wakeDir * r * 0.7 - fOff1, y + r * 0.4);
       ctx.stroke();
       ctx.shadowBlur = 0;
+      ctx.restore();
+    } else if (bk === 'lava') {
+      // Molten magma fissure churning underfoot
+      ctx.save();
+      const mG = ctx.createRadialGradient(x, y + r * 0.35, 2, x, y + r * 0.35, r * 1.5);
+      mG.addColorStop(0, '#ffff00');
+      mG.addColorStop(0.3, '#ff5722');
+      mG.addColorStop(0.8, '#bf360c');
+      mG.addColorStop(1, 'transparent');
+      ctx.fillStyle = mG;
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.36, r * 1.5, r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (bk === 'sand') {
+      // Shifting dune trench as the sand scorpion crawls
+      ctx.save();
+      ctx.fillStyle = 'rgba(120, 80, 40, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.38, r * 1.4, r * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd54f';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.34, r * 0.95, 0, Math.PI);
+      ctx.stroke();
+      ctx.restore();
+    } else if (bk === 'ketchup') {
+      // Viscous sauce slick puddle expanding beneath the Sauce Tyrant
+      ctx.save();
+      ctx.fillStyle = 'rgba(198, 40, 40, 0.75)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.42, r * 1.35, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#b71c1c';
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -11123,21 +11109,45 @@ function drawBiomeBoss(ctx, x, y, r, en, time, biome, fogged) {
     ctx.shadowBlur = 0;
 
   } else if (bk === 'pink') {
-    // 8. Şeker Diyarı Kraliçesi (Sugar Empress Colossus)
-    pixDisk(x, cy, r, '#f8bbd0', '#ec407a', '#880e4f');
-    ctx.fillStyle = '#ffd54f';
+    // 8. Şeker Diyarı Kraliçesi (Majestic Sugar Empress Colossus)
+    pixDisk(x, cy, r, '#fce4ec', '#f06292', '#880e4f');
+    // Royal Flowing Confectionary Gown
+    ctx.fillStyle = '#f48fb1';
     ctx.beginPath();
-    ctx.moveTo(x - r * 0.6, cy - r * 0.4);
-    ctx.lineTo(x - r * 0.7, cy - r * 1.1);
-    ctx.lineTo(x, cy - r * 0.7);
-    ctx.lineTo(x + r * 0.7, cy - r * 1.1);
-    ctx.lineTo(x + r * 0.6, cy - r * 0.4);
+    ctx.moveTo(x - r * 0.75, cy + r * 0.2);
+    ctx.lineTo(x - r * 1.05, cy + r * 0.85);
+    ctx.lineTo(x + r * 1.05, cy + r * 0.85);
+    ctx.lineTo(x + r * 0.75, cy + r * 0.2);
     ctx.closePath();
     ctx.fill();
+    // Radiant Golden Sugar Crown with Ruby Jewels
+    ctx.fillStyle = '#ffd54f';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.65, cy - r * 0.45);
+    ctx.lineTo(x - r * 0.75, cy - r * 1.25);
+    ctx.lineTo(x - r * 0.35, cy - r * 0.85);
+    ctx.lineTo(x, cy - r * 1.35);
+    ctx.lineTo(x + r * 0.35, cy - r * 0.85);
+    ctx.lineTo(x + r * 0.75, cy - r * 1.25);
+    ctx.lineTo(x + r * 0.65, cy - r * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ff1744';
+    ctx.beginPath();
+    ctx.arc(x, cy - r * 1.15, 3.5, 0, Math.PI * 2);
+    ctx.arc(x - r * 0.65, cy - r * 1.05, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.65, cy - r * 1.05, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Beautiful Royal Anime Eyes
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(x - r * 0.3, cy - r * 0.1, Math.max(3, r * 0.14), 0, Math.PI * 2);
-    ctx.arc(x + r * 0.3, cy - r * 0.1, Math.max(3, r * 0.14), 0, Math.PI * 2);
+    ctx.arc(x - r * 0.3, cy - r * 0.1, Math.max(3.5, r * 0.14), 0, Math.PI * 2);
+    ctx.arc(x + r * 0.3, cy - r * 0.1, Math.max(3.5, r * 0.14), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ad1457';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.3, cy - r * 0.1, Math.max(2, r * 0.08), 0, Math.PI * 2);
+    ctx.arc(x + r * 0.3, cy - r * 0.1, Math.max(2, r * 0.08), 0, Math.PI * 2);
     ctx.fill();
 
   } else if (bk === 'ketchup') {

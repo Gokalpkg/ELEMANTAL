@@ -1,0 +1,203 @@
+
+> index.html:29295:function render() {
+  index.html:29296:  if (!player) return;
+  index.html:29297:  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  index.html:29298:  const effShake = shake * getShakeMultiplier();
+  index.html:29299:  const shx = effShake ? (Math.random()-0.5)*effShake : 0;
+  index.html:29300:  const shy = effShake ? (Math.random()-0.5)*effShake : 0;
+  index.html:29301:  const biome = currentBiome();
+  index.html:29302:  ctx.clearRect(0,0,W,H);
+  index.html:29303:  ctx.imageSmoothingEnabled = false;
+  index.html:29304:  ctx.save();
+  index.html:29305:  ctx.translate(Math.round(shx - cam.x), Math.round(shy - cam.y));
+  index.html:29306:  const now = performance.now();
+  index.html:29307:  const cullL = cam.x - 140, cullR = cam.x + W + 140, cullT = cam.y - 140, cullB = cam.y + H + 140;
+  index.html:29308:  // Forest scale zoom removed for consistent stable camera
+  index.html:29309:
+  index.html:29310:    drawBiomeTileFloor(ctx, cam, W, H, biome, time, visualMode);
+  index.html:29311:  drawDecals(ctx);
+  index.html:29312:  drawGroundScatter(ctx, cam, W, H, biome, time);
+  index.html:29313:  drawArenaShrine(ctx, cam, time);
+  index.html:29314:  drawParallaxAtmosphere(ctx, cam, W, H, biome, time);
+  index.html:29315:  updateAndDrawBiomeMotes(biome);
+  index.html:29316:
+  index.html:29317:  // Boss Arena Floor Glyphs & Summoning Mandala
+  index.html:29318:  const currentBoss = enemies && enemies.find(e => e.type === 'boss');
+  index.html:29319:  if (currentBoss) {
+  index.html:29320:    drawBossArenaFloor(ctx, cam, biome, currentBoss, time);
+  index.html:29321:  }
+  index.html:29322:
+  index.html:29323:  // Boss Arena Menacing Atmosphere Vignette (Screen-space cached gradient, 0 GC per frame)
+  index.html:29324:  if (currentBoss) {
+  index.html:29325:    const isRaged = currentBoss.raged || (currentBoss.hp < currentBoss.maxHp * 0.5) || currentBoss.phase2;
+  index.html:29326:    const arenaEdgeCol = isRaged ? 'rgba(255, 23, 68, 0.40)' : (biome && biome.accent ? biome.accent + '3b' : 'rgba(0, 0, 0, 0.45)');
+  index.html:29327:    if (!_cachedBossVig || _cachedBossVigCol !== arenaEdgeCol) {
+  index.html:29328:      _cachedBossVigCol = arenaEdgeCol;
+  index.html:29329:      _cachedBossVig = ctx.createRadialGradient(W/2, H/2, W * 0.30, W/2, H/2, W * 0.88);
+  index.html:29330:      _cachedBossVig.addColorStop(0, 'transparent');
+  index.html:29331:      _cachedBossVig.addColorStop(0.65, 'rgba(0, 0, 0, 0.14)');
+  index.html:29332:      _cachedBossVig.addColorStop(1, arenaEdgeCol);
+  index.html:29333:    }
+  index.html:29334:    ctx.save();
+  index.html:29335:    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  index.html:29336:    ctx.fillStyle = _cachedBossVig;
+  index.html:29337:    ctx.fillRect(0, 0, W, H);
+  index.html:29338:    ctx.restore();
+  index.html:29339:  }
+  index.html:29340:
+  index.html:29341:  // Gentle ambient wind specks without intrusive blue boxes or lines
+  index.html:29342:  winds.forEach(w => {
+  index.html:29343:    if (w.x + w.w < cullL || w.x > cullR || w.y + w.h < cullT || w.y > cullB) return;
+  index.html:29344:    ctx.save();
+  index.html:29345:    ctx.globalAlpha = 0.18;
+  index.html:29346:    ctx.fillStyle = '#bae6fd';
+  index.html:29347:    for (let i = 0; i < 3; i++) {
+  index.html:29348:      const px = w.x + ((time * 1.5 * w.str + i * 50) % w.w);
+  index.html:29349:      const py = w.y + w.h * (0.3 + i * 0.2);
+  index.html:29350:      ctx.fillRect(px, py, 3, 2);
+  index.html:29351:    }
+  index.html:29352:    ctx.restore();
+  index.html:29353:  });
+  index.html:29354:  // Gravity Wells rendering
+  index.html:29355:  _gravityWells.forEach(gw => {
+  index.html:29356:    ctx.save();
+  index.html:29357:    const progress = 1 - gw.life / gw.maxLife;
+  index.html:29358:    ctx.globalAlpha = 0.3 * (1 - progress);
+  index.html:29359:    // Swirling void circle
+  index.html:29360:    for (let ring = 0; ring < 3; ring++) {
+  index.html:29361:      ctx.beginPath();
+  index.html:29362:      const rr = gw.r * (0.3 + ring * 0.3) * (0.8 + 0.2 * Math.sin(time * 0.2 + ring));
+  index.html:29363:      ctx.arc(gw.x, gw.y, rr, 0, Math.PI * 2);
+  index.html:29364:      ctx.strokeStyle = ring === 0 ? '#8b5cf6' : ring === 1 ? '#6d28d9' : '#4c1d95';
+  index.html:29365:      ctx.lineWidth = 2 - ring * 0.5;
+  index.html:29366:      ctx.setLineDash([4 + ring * 2, 4 + ring * 2]);
+  index.html:29367:      ctx.lineDashOffset = time * (3 + ring * 2);
+  index.html:29368:      ctx.stroke();
+  index.html:29369:    }
+  index.html:29370:    ctx.setLineDash([]);
+  index.html:29371:    // Center glow
+  index.html:29372:    const cg = ctx.createRadialGradient(gw.x, gw.y, 0, gw.x, gw.y, 30);
+  index.html:29373:    cg.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+  index.html:29374:    cg.addColorStop(1, 'transparent');
+  index.html:29375:    ctx.fillStyle = cg;
+  index.html:29376:    ctx.fillRect(gw.x - 30, gw.y - 30, 60, 60);
+  index.html:29377:    ctx.restore();
+  index.html:29378:  });
+  index.html:29379:
+  index.html:29380:  // Environmental Hazards rendering
+  index.html:29381:  if (_envHazards) {
+  index.html:29382:    _envHazards.forEach(hz => {
+  index.html:29383:      if (hz.x < cullL - hz.r || hz.x > cullR + hz.r || hz.y < cullT - hz.r || hz.y > cullB + hz.r) return;
+  index.html:29384:      ctx.save();
+  index.html:29385:      const alpha = Math.min(0.35, hz.life / hz.maxLife * 0.5);
+  index.html:29386:      ctx.globalAlpha = alpha;
+  index.html:29387:      const hazCols = { forest: '#22c55e', water: '#3b82f6', ice: '#88ccee', lava: '#ff4400', storm: '#a78bfa', sand: '#d4a050', stone: '#94a3b8' };
+  index.html:29388:      ctx.fillStyle = hazCols[hz.type] || '#94a3b8';
+  index.html:29389:      ctx.beginPath();
+  index.html:29390:      ctx.arc(hz.x, hz.y, hz.r, 0, Math.PI * 2);
+  index.html:29391:      ctx.fill();
+  index.html:29392:      // Pulsing warning ring
+  index.html:29393:      ctx.strokeStyle = hazCols[hz.type] || '#fff';
+  index.html:29394:      ctx.lineWidth = 1.5;
+  index.html:29395:      ctx.globalAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 0.15));
+  index.html:29396:      ctx.beginPath();
+  index.html:29397:      ctx.arc(hz.x, hz.y, hz.r + 3 + Math.sin(time * 0.1) * 3, 0, Math.PI * 2);
+  index.html:29398:      ctx.stroke();
+  index.html:29399:      ctx.restore();
+  index.html:29400:    });
+  index.html:29401:  }
+  index.html:29402:
+  index.html:29403:  elemStains.forEach(s => {
+  index.html:29404:    const sr = s.r || 50;
+  index.html:29405:    if (s.x < cullL - sr || s.x > cullR + sr || s.y < cullT - sr || s.y > cullB + sr) return;
+  index.html:29406:    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+  index.html:29407:    ctx.fillStyle = s.kind==='fire' ? 'rgba(255,90,50,0.18)' : s.kind==='water' ? 'rgba(70,160,255,0.18)' : 'rgba(40,180,90,0.18)';
+  index.html:29408:    ctx.globalAlpha = Math.max(0.12, s.life / (s.max || 180));
+  index.html:29409:    ctx.fill();
+  index.html:29410:    ctx.globalAlpha = 1;
+  index.html:29411:  });
+  index.html:29412:  // Background clutter removed to ensure 100% pure biome ground integrity
+  index.html:29413:  if (classTurrets && classTurrets.length) {
+  index.html:29414:    classTurrets.forEach(t => {
+  index.html:29415:      if (t.x < cullL - 30 || t.x > cullR + 30 || t.y < cullT - 30 || t.y > cullB + 30) return;
+  index.html:29416:      ctx.save();
+  index.html:29417:      ctx.globalAlpha = 0.85;
+  index.html:29418:      ctx.fillStyle = t.root ? '#8d6e63' : '#ff8a65';
+  index.html:29419:      ctx.beginPath();
+  index.html:29420:      ctx.arc(t.x, t.y, t.r || 10, 0, Math.PI * 2);
+  index.html:29421:      ctx.fill();
+  index.html:29422:      ctx.strokeStyle = '#ffe08a';
+  index.html:29423:      ctx.lineWidth = 1.5;
+  index.html:29424:      ctx.stroke();
+  index.html:29425:      ctx.restore();
+  index.html:29426:    });
+  index.html:29427:  }
+  index.html:29428:  if (altar && altar.x >= cullL - (altar.r || 50) && altar.x <= cullR + (altar.r || 50) && altar.y >= cullT - (altar.r || 50) && altar.y <= cullB + (altar.r || 50)) {
+  index.html:29429:    ctx.beginPath(); ctx.arc(altar.x, altar.y, altar.r, 0, Math.PI*2);
+  index.html:29430:    ctx.fillStyle = altar.done ? 'rgba(245,197,66,0.12)' : 'rgba(245,197,66,0.22)';
+  index.html:29431:    ctx.fill();
+  index.html:29432:    ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 2; ctx.stroke();
+  index.html:29433:    if (!altar.done && altar.charge > 0) {
+  index.html:29434:      ctx.beginPath();
+  index.html:29435:      ctx.arc(altar.x, altar.y, altar.r + 4, -Math.PI/2, -Math.PI/2 + (altar.charge/480)*Math.PI*2);
+  index.html:29436:      ctx.strokeStyle = '#fff4b8'; ctx.lineWidth = 3; ctx.stroke();
+  index.html:29437:    }
+  index.html:29438:  }
+  index.html:29439:
+  index.html:29440:  ctx.globalAlpha = 1;
+  index.html:29441:
+  index.html:29442:  ambient.forEach(p => {
+  index.html:29443:    if (p.x<cam.x-8||p.x>cam.x+W+8||p.y<cam.y-8||p.y>cam.y+H+8) return;
+  index.html:29444:    ctx.globalAlpha = p.a;
+  index.html:29445:    ctx.fillStyle = visHex(biome.accent, visualMode==='ketchup' ? 'floor' : 'char');
+  index.html:29446:    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+  index.html:29447:  });
+  index.html:29448:  ctx.globalAlpha = 1;
+  index.html:29449:
+  index.html:29450:  stains.forEach(s => {
+  index.html:29451:    if (s.x < cullL || s.x > cullR || s.y < cullT || s.y > cullB) return;
+  index.html:29452:    ctx.save();
+  index.html:29453:    ctx.translate(Math.round(s.x), Math.round(s.y));
+  index.html:29454:    ctx.rotate(s.rot);
+  index.html:29455:    ctx.globalAlpha = s.a;
+  index.html:29456:    ctx.fillStyle = s.c || '#c10d0d';
+  index.html:29457:    const rw = Math.max(4, Math.round(s.rx));
+  index.html:29458:    const rh = Math.max(3, Math.round(s.ry));
+  index.html:29459:    ctx.fillRect(-rw, -rh, rw * 2, rh * 2);
+  index.html:29460:    ctx.fillRect(-Math.round(rw * 0.5), -rh - 2, Math.round(rw), 4);
+  index.html:29461:    ctx.restore();
+  index.html:29462:  });
+  index.html:29463:  groundMarks.forEach(m => {
+  index.html:29464:    if (m.x < cullL - 25 || m.x > cullR + 25 || m.y < cullT - 25 || m.y > cullB + 25) return;
+  index.html:29465:    ctx.save();
+  index.html:29466:    ctx.translate(m.x, m.y);
+  index.html:29467:    ctx.rotate(m.rot || 0);
+  index.html:29468:    if (m.kind === 'root') {
+  index.html:29469:      ctx.fillStyle = visHex('#1b7a40', 'char');
+  index.html:29470:      ctx.fillRect(-2, -10, 4, 22);
+  index.html:29471:      ctx.fillRect(-8, -2, 16, 4);
+  index.html:29472:      ctx.fillRect(-6, 4, 4, 8);
+  index.html:29473:      ctx.fillRect(2, 4, 4, 8);
+  index.html:29474:    } else if (m.kind === 'slow') {
+  index.html:29475:      ctx.fillStyle = visHex('#4aa3ff', 'char');
+  index.html:29476:      ctx.fillRect(-6, -2, 12, 4);
+  index.html:29477:      ctx.fillRect(-4, 2, 8, 4);
+  index.html:29478:      ctx.fillRect(-2, 6, 4, 4);
+  index.html:29479:    } else if (m.kind === 'burn') {
+  index.html:29480:      ctx.fillStyle = visHex('#ff6b4a', 'char');
+  index.html:29481:      ctx.fillRect(-2, -8, 4, 12);
+  index.html:29482:      ctx.fillRect(-6, -2, 4, 6);
+  index.html:29483:      ctx.fillRect(2, -4, 4, 8);
+  index.html:29484:    } else if (m.kind === 'stun') {
+  index.html:29485:      ctx.fillStyle = visHex('#f4d03f', 'char');
+  index.html:29486:      ctx.fillRect(-8, -8, 4, 4);
+  index.html:29487:      ctx.fillRect(4, -10, 4, 4);
+  index.html:29488:      ctx.fillRect(-2, -12, 4, 4);
+  index.html:29489:    } else if (m.kind === 'shock') {
+  index.html:29490:      ctx.fillStyle = visHex('#f4d03f', 'char');
+  index.html:29491:      ctx.fillRect(0, -8, 4, 6);
+  index.html:29492:      ctx.fillRect(-4, -2, 8, 4);
+  index.html:29493:      ctx.fillRect(-2, 2, 4, 8);
+  index.html:29494:    }
+  index.html:29495:    ctx.restore();
+

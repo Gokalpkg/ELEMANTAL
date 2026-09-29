@@ -1,0 +1,503 @@
+
+> function render() {
+    if (!player) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const effShake = shake * getShakeMultiplier();
+    const shx = effShake ? (Math.random()-0.5)*effShake : 0;
+    const shy = effShake ? (Math.random()-0.5)*effShake : 0;
+    const biome = currentBiome();
+    ctx.clearRect(0,0,W,H);
+    ctx.imageSmoothingEnabled = false;
+    ctx.save();
+    ctx.translate(Math.round(shx - cam.x), Math.round(shy - cam.y));
+    const now = performance.now();
+    const cullL = cam.x - 140, cullR = cam.x + W + 140, cullT = cam.y - 140, cullB = cam.y + H + 140;
+    // Forest scale zoom removed for consistent stable camera
+  
+      drawBiomeTileFloor(ctx, cam, W, H, biome, time, visualMode);
+    drawDecals(ctx);
+    drawGroundScatter(ctx, cam, W, H, biome, time);
+    drawArenaShrine(ctx, cam, time);
+    drawParallaxAtmosphere(ctx, cam, W, H, biome, time);
+    updateAndDrawBiomeMotes(biome);
+  
+    // Boss Arena Floor Glyphs & Summoning Mandala
+    const currentBoss = enemies && enemies.find(e => e.type === 'boss');
+    if (currentBoss) {
+      drawBossArenaFloor(ctx, cam, biome, currentBoss, time);
+    }
+  
+    // Boss Arena Menacing Atmosphere Vignette (Screen-space cached gradient, 0 GC per frame)
+    if (currentBoss) {
+      const isRaged = currentBoss.raged || (currentBoss.hp < currentBoss.maxHp * 0.5) || currentBoss.phase2;
+      const arenaEdgeCol = isRaged ? 'rgba(255, 23, 68, 0.40)' : (biome && biome.accent ? biome.accent + '3b' : 'rgba(0, 0, 0, 0.45)');
+      if (!_cachedBossVig || _cachedBossVigCol !== arenaEdgeCol) {
+        _cachedBossVigCol = arenaEdgeCol;
+        _cachedBossVig = ctx.createRadialGradient(W/2, H/2, W * 0.30, W/2, H/2, W * 0.88);
+        _cachedBossVig.addColorStop(0, 'transparent');
+        _cachedBossVig.addColorStop(0.65, 'rgba(0, 0, 0, 0.14)');
+        _cachedBossVig.addColorStop(1, arenaEdgeCol);
+      }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = _cachedBossVig;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+  
+    // Gentle ambient wind specks without intrusive blue boxes or lines
+    winds.forEach(w => {
+      if (w.x + w.w < cullL || w.x > cullR || w.y + w.h < cullT || w.y > cullB) return;
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#bae6fd';
+      for (let i = 0; i < 3; i++) {
+        const px = w.x + ((time * 1.5 * w.str + i * 50) % w.w);
+        const py = w.y + w.h * (0.3 + i * 0.2);
+        ctx.fillRect(px, py, 3, 2);
+      }
+      ctx.restore();
+    });
+    // Gravity Wells rendering
+    _gravityWells.forEach(gw => {
+      ctx.save();
+      const progress = 1 - gw.life / gw.maxLife;
+      ctx.globalAlpha = 0.3 * (1 - progress);
+      // Swirling void circle
+      for (let ring = 0; ring < 3; ring++) {
+        ctx.beginPath();
+        const rr = gw.r * (0.3 + ring * 0.3) * (0.8 + 0.2 * Math.sin(time * 0.2 + ring));
+        ctx.arc(gw.x, gw.y, rr, 0, Math.PI * 2);
+        ctx.strokeStyle = ring === 0 ? '#8b5cf6' : ring === 1 ? '#6d28d9' : '#4c1d95';
+        ctx.lineWidth = 2 - ring * 0.5;
+        ctx.setLineDash([4 + ring * 2, 4 + ring * 2]);
+        ctx.lineDashOffset = time * (3 + ring * 2);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      // Center glow
+      const cg = ctx.createRadialGradient(gw.x, gw.y, 0, gw.x, gw.y, 30);
+      cg.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+      cg.addColorStop(1, 'transparent');
+      ctx.fillStyle = cg;
+      ctx.fillRect(gw.x - 30, gw.y - 30, 60, 60);
+      ctx.restore();
+    });
+  
+    // Environmental Hazards rendering
+    if (_envHazards) {
+      _envHazards.forEach(hz => {
+        if (hz.x < cullL - hz.r || hz.x > cullR + hz.r || hz.y < cullT - hz.r || hz.y > cullB + hz.r) return;
+        ctx.save();
+        const alpha = Math.min(0.35, hz.life / hz.maxLife * 0.5);
+        ctx.globalAlpha = alpha;
+        const hazCols = { forest: '#22c55e', water: '#3b82f6', ice: '#88ccee', lava: '#ff4400', storm: '#a78bfa', sand: '#d4a050', stone: '#94a3b8' };
+        ctx.fillStyle = hazCols[hz.type] || '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(hz.x, hz.y, hz.r, 0, Math.PI * 2);
+        ctx.fill();
+        // Pulsing warning ring
+        ctx.strokeStyle = hazCols[hz.type] || '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = alpha * (0.5 + 0.5 * Math.sin(time * 0.15));
+        ctx.beginPath();
+        ctx.arc(hz.x, hz.y, hz.r + 3 + Math.sin(time * 0.1) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+  
+    elemStains.forEach(s => {
+      const sr = s.r || 50;
+      if (s.x < cullL - sr || s.x > cullR + sr || s.y < cullT - sr || s.y > cullB + sr) return;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = s.kind==='fire' ? 'rgba(255,90,50,0.18)' : s.kind==='water' ? 'rgba(70,160,255,0.18)' : 'rgba(40,180,90,0.18)';
+      ctx.globalAlpha = Math.max(0.12, s.life / (s.max || 180));
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+    // Background clutter removed to ensure 100% pure biome ground integrity
+    if (classTurrets && classTurrets.length) {
+      classTurrets.forEach(t => {
+        if (t.x < cullL - 30 || t.x > cullR + 30 || t.y < cullT - 30 || t.y > cullB + 30) return;
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = t.root ? '#8d6e63' : '#ff8a65';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.r || 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffe08a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+    if (altar && altar.x >= cullL - (altar.r || 50) && altar.x <= cullR + (altar.r || 50) && altar.y >= cullT - (altar.r || 50) && altar.y <= cullB + (altar.r || 50)) {
+      ctx.beginPath(); ctx.arc(altar.x, altar.y, altar.r, 0, Math.PI*2);
+      ctx.fillStyle = altar.done ? 'rgba(245,197,66,0.12)' : 'rgba(245,197,66,0.22)';
+      ctx.fill();
+      ctx.strokeStyle = '#f5c542'; ctx.lineWidth = 2; ctx.stroke();
+      if (!altar.done && altar.charge > 0) {
+        ctx.beginPath();
+        ctx.arc(altar.x, altar.y, altar.r + 4, -Math.PI/2, -Math.PI/2 + (altar.charge/480)*Math.PI*2);
+        ctx.strokeStyle = '#fff4b8'; ctx.lineWidth = 3; ctx.stroke();
+      }
+    }
+  
+    ctx.globalAlpha = 1;
+  
+    ambient.forEach(p => {
+      if (p.x<cam.x-8||p.x>cam.x+W+8||p.y<cam.y-8||p.y>cam.y+H+8) return;
+      ctx.globalAlpha = p.a;
+      ctx.fillStyle = visHex(biome.accent, visualMode==='ketchup' ? 'floor' : 'char');
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  
+    stains.forEach(s => {
+      if (s.x < cullL || s.x > cullR || s.y < cullT || s.y > cullB) return;
+      ctx.save();
+      ctx.translate(Math.round(s.x), Math.round(s.y));
+      ctx.rotate(s.rot);
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = s.c || '#c10d0d';
+      const rw = Math.max(4, Math.round(s.rx));
+      const rh = Math.max(3, Math.round(s.ry));
+      ctx.fillRect(-rw, -rh, rw * 2, rh * 2);
+      ctx.fillRect(-Math.round(rw * 0.5), -rh - 2, Math.round(rw), 4);
+      ctx.restore();
+    });
+    groundMarks.forEach(m => {
+      if (m.x < cullL - 25 || m.x > cullR + 25 || m.y < cullT - 25 || m.y > cullB + 25) return;
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rot || 0);
+      if (m.kind === 'root') {
+        ctx.fillStyle = visHex('#1b7a40', 'char');
+        ctx.fillRect(-2, -10, 4, 22);
+        ctx.fillRect(-8, -2, 16, 4);
+        ctx.fillRect(-6, 4, 4, 8);
+        ctx.fillRect(2, 4, 4, 8);
+      } else if (m.kind === 'slow') {
+        ctx.fillStyle = visHex('#4aa3ff', 'char');
+        ctx.fillRect(-6, -2, 12, 4);
+        ctx.fillRect(-4, 2, 8, 4);
+        ctx.fillRect(-2, 6, 4, 4);
+      } else if (m.kind === 'burn') {
+        ctx.fillStyle = visHex('#ff6b4a', 'char');
+        ctx.fillRect(-2, -8, 4, 12);
+        ctx.fillRect(-6, -2, 4, 6);
+        ctx.fillRect(2, -4, 4, 8);
+      } else if (m.kind === 'stun') {
+        ctx.fillStyle = visHex('#f4d03f', 'char');
+        ctx.fillRect(-8, -8, 4, 4);
+        ctx.fillRect(4, -10, 4, 4);
+        ctx.fillRect(-2, -12, 4, 4);
+      } else if (m.kind === 'shock') {
+        ctx.fillStyle = visHex('#f4d03f', 'char');
+        ctx.fillRect(0, -8, 4, 6);
+        ctx.fillRect(-4, -2, 8, 4);
+        ctx.fillRect(-2, 2, 4, 8);
+      }
+      ctx.restore();
+    });
+  
+    hazards.forEach(h => {
+      const hr = Math.max(h.r || 40, h.len || 40);
+      if (h.x < cullL - hr || h.x > cullR + hr || h.y < cullT - hr || h.y > cullB + hr) return;
+      drawGroundShadow(h.x + 3, h.y + 8, h.r * 0.95, h.r * 0.42);
+      ctx.save();
+  
+      if (h.type === 'telegraph_ring') {
+        const p = Math.max(0, Math.min(1, (h.until - now) / (h.dur || 1200)));
+        const curR = h.r * (1 - p * 0.25);
+        ctx.strokeStyle = h.color || 'rgba(239, 68, 68, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, curR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, curR, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (h.type === 'telegraph_line') {
+        ctx.translate(h.x, h.y);
+        ctx.rotate(h.rot || 0);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+        ctx.fillRect(-h.w / 2, 0, h.w, h.len);
+        ctx.strokeStyle = h.color || 'rgba(239, 68, 68, 0.80)';
+        ctx.lineWidth = 2.2;
+        ctx.setLineDash([10, 6]);
+        ctx.strokeRect(-h.w / 2, 0, h.w, h.len);
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+        for (let cy = 40; cy < h.len; cy += 80) {
+          ctx.beginPath();
+          ctx.moveTo(0, cy + 18);
+          ctx.lineTo(-12, cy);
+          ctx.lineTo(12, cy);
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else if (h.type === 'bramble') {
+        // SARMAŞIK KAPANI (ROOT TRAP - KAPAN KLAN) — PAFTA IMAGE 2
+        const rootCount = 8;
+        const rootR = h.r;
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+  
+        ctx.fillStyle = 'rgba(27, 94, 32, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, rootR, rootR * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        for (let rIdx = 0; rIdx < rootCount; rIdx++) {
+          const rAng = (rIdx / rootCount) * Math.PI * 2 + (h.x * 0.01);
+          const rBaseX = h.x + Math.cos(rAng) * (rootR * 0.35);
+          const rBaseY = h.y + Math.sin(rAng) * (rootR * 0.25);
+          const rMidX = h.x + Math.cos(rAng) * (rootR * 0.85);
+          const rMidY = h.y + Math.sin(rAng) * (rootR * 0.6) - 10;
+          const rTipX = h.x + Math.cos(rAng + 0.3) * (rootR * 0.45);
+          const rTipY = h.y + Math.sin(rAng + 0.3) * (rootR * 0.3) - 18;
+  
+          ctx.strokeStyle = '#271b12';
+          ctx.lineWidth = 4.2;
+          ctx.beginPath();
+          ctx.moveTo(rBaseX, rBaseY);
+          ctx.quadraticCurveTo(rMidX, rMidY, rTipX, rTipY);
+          ctx.stroke();
+  
+          ctx.strokeStyle = '#4e342e';
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(rBaseX, rBaseY - 1);
+          ctx.quadraticCurveTo(rMidX, rMidY - 1, rTipX, rTipY - 1);
+          ctx.stroke();
+  
+          ctx.fillStyle = '#4caf50';
+          ctx.beginPath();
+          ctx.arc(rTipX, rTipY, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+  
+      } else if (h.type === 'lava') {
+        // HÜCUM LAV İZİ & MAGMA HAVUZU — PAFTA IMAGE 5
+        ctx.fillStyle = '#1c0a06';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        const lavaG = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.r * 0.85);
+        lavaG.addColorStop(0, '#fff9c4');
+        lavaG.addColorStop(0.35, '#ffd54f');
+        lavaG.addColorStop(0.7, '#ff3d00');
+        lavaG.addColorStop(1, 'rgba(191, 54, 12, 0.4)');
+        ctx.fillStyle = lavaG;
+        ctx.shadowColor = '#ff3d00';
+        ctx.shadowBlur = 0; /* 60fps */
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r * 0.82, h.r * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+  
+        ctx.fillStyle = '#26120c';
+        ctx.fillRect(h.x - h.r * 0.4, h.y - 3, h.r * 0.35, 5);
+        ctx.fillRect(h.x + h.r * 0.1, h.y - 4, h.r * 0.32, 6);
+  
+        ctx.fillStyle = '#ffeb3b';
+        for (let s = 0; s < 3; s++) {
+          const sAng = time * 0.1 + s * 2.1;
+          const sx = h.x + Math.sin(sAng) * (h.r * 0.5);
+          const sy = h.y - 6 - Math.abs(Math.sin(time * 0.15 + s)) * 12;
+          ctx.fillRect(sx, sy, 2, 2);
+        }
+  
+      } else if (h.type === 'ice') {
+        // HÜCUM BUZ İZİ & DONMUŞ KRİSTAL ZEMİN — PAFTA 2
+        ctx.fillStyle = 'rgba(6, 24, 40, 0.65)';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        const iceG = ctx.createRadialGradient(h.x, h.y, 2, h.x, h.y, h.r * 0.85);
+        iceG.addColorStop(0, '#e0f7fa');
+        iceG.addColorStop(0.4, '#80d8ff');
+        iceG.addColorStop(0.8, '#0288d1');
+        iceG.addColorStop(1, 'transparent');
+        ctx.fillStyle = iceG;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 0; /* 60fps */
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r * 0.85, h.r * 0.48, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+  
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 1.4;
+        for (let c = 0; c < 4; c++) {
+          const ca = c * (Math.PI / 2) + 0.4;
+          const cx = h.x + Math.cos(ca) * (h.r * 0.45);
+          const cy = h.y + Math.sin(ca) * (h.r * 0.25);
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - 10);
+          ctx.lineTo(cx + 4, cy);
+          ctx.lineTo(cx - 4, cy);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+  
+      } else if (h.type === 'storm') {
+        // ELEKTRİKLİ ZEMİN ÇATLAĞI & STATİK ARK İZİ — PAFTA 3
+        ctx.fillStyle = 'rgba(15, 10, 28, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        ctx.strokeStyle = '#ffd600';
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = '#ffd600';
+        ctx.shadowBlur = 0; /* 60fps */
+        ctx.beginPath();
+        ctx.moveTo(h.x - h.r * 0.8, h.y);
+        ctx.lineTo(h.x - h.r * 0.3, h.y - 6);
+        ctx.lineTo(h.x + h.r * 0.2, h.y + 7);
+        ctx.lineTo(h.x + h.r * 0.8, h.y);
+        ctx.stroke();
+  
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(h.x - h.r * 0.3, h.y - 6); ctx.lineTo(h.x, h.y - 12);
+        ctx.moveTo(h.x + h.r * 0.2, h.y + 7); ctx.lineTo(h.x + h.r * 0.5, h.y + 11);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+  
+      } else if (h.type === 'water') {
+        // GİRDAP ALAN EFEKTİ & İLETKEN ELEKTRİK (STEP 6)
+        ctx.save();
+        ctx.translate(h.x, h.y);
+        ctx.rotate(time * 0.08);
+  
+        const isElectrified = h.electrifiedUntil && performance.now() < h.electrifiedUntil;
+        const wg = ctx.createRadialGradient(0, 0, 2, 0, 0, h.r);
+        if (isElectrified) {
+          wg.addColorStop(0, '#fef08a');
+          wg.addColorStop(0.4, '#0284c7');
+          wg.addColorStop(0.8, '#38bdf8');
+          wg.addColorStop(1, 'transparent');
+        } else {
+          wg.addColorStop(0, '#01579b');
+          wg.addColorStop(0.5, '#0288d1');
+          wg.addColorStop(0.8, '#4fc3f7');
+          wg.addColorStop(1, 'transparent');
+        }
+        ctx.fillStyle = wg;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, h.r, h.r * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        // İletken havuz elektrik kıvılcımları
+        if (isElectrified) {
+          ctx.strokeStyle = '#fef08a';
+          ctx.shadowColor = '#facc15';
+          ctx.shadowBlur = 0; /* 60fps */
+          ctx.lineWidth = 2.4;
+          for (let a = 0; a < 3; a++) {
+            const lAng = (a * Math.PI * 2 / 3) + Math.sin(time * 0.4 + a) * 0.4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(lAng) * (h.r * 0.45) + (Math.random()-0.5)*8, Math.sin(lAng) * (h.r * 0.3) + (Math.random()-0.5)*8);
+            ctx.lineTo(Math.cos(lAng) * (h.r * 0.85), Math.sin(lAng) * (h.r * 0.52));
+            ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+        }
+  
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 2;
+        for (let s = 0; s < 3; s++) {
+          const sa = s * (Math.PI * 2 / 3);
+          ctx.beginPath();
+          for (let rStep = 4; rStep <= h.r * 0.85; rStep += 4) {
+            const theta = sa + rStep * 0.15;
+            const sx = Math.cos(theta) * rStep;
+            const sy = Math.sin(theta) * (rStep * 0.6);
+            if (rStep === 4) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+  
+      } else if (h.type === 'night') {
+        // KAN TUZU TUZAĞI & KAN GİRDABI — PAFTA 5
+        ctx.fillStyle = 'rgba(20, 8, 14, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        const sqSize = h.r * 0.7;
+        ctx.strokeStyle = '#ff1744';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 0; /* 60fps */
+        ctx.strokeRect(h.x - sqSize, h.y - sqSize * 0.5, sqSize * 2, sqSize);
+  
+        ctx.fillStyle = 'rgba(183, 28, 28, 0.45)';
+        ctx.fillRect(h.x - sqSize + 2, h.y - sqSize * 0.5 + 2, sqSize * 2 - 4, sqSize - 4);
+        ctx.shadowBlur = 0;
+  
+        ctx.fillStyle = '#ff1744';
+        ctx.strokeStyle = '#b71c1c';
+        ctx.lineWidth = 1.2;
+        const crystalOffsets = [-12, -6, 0, 6, 12];
+        const crystalHeights = [10, 16, 20, 14, 9];
+        crystalOffsets.forEach((cxOff, i) => {
+          const cX = h.x + cxOff;
+          const cY = h.y + 2;
+          const cH = crystalHeights[i];
+          ctx.beginPath();
+          ctx.moveTo(cX, cY - cH);
+          ctx.lineTo(cX + 3.5, cY);
+          ctx.lineTo(cX - 3.5, cY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+  
+      } else if (h.type === 'caramel') {
+        // =========================================================================
+        // YAPIŞKAN KARAMEL GÖLETİ (STICKY CARAMEL POND) — PAFTA IMAGE 2!
+        // =========================================================================
+        ctx.fillStyle = 'rgba(180, 83, 9, 0.7)';
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+  
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        for (let cr = 3; cr <= h.r * 0.8; cr += 3.5) {
+          const theta = cr * 0.2 + time * 0.05;
+          const cx = h.x + Math.cos(theta) * cr;
+          const cy = h.y + Math.sin(theta) * (cr * 0.55);
+          if (cr === 3) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+        }
+        ctx.stroke();
+  
+      } else if (h.type === 'ketchup') {
+        // =========================================================================
+        // KAYGAN KETÇAP ŞERİDİ (WARLORD KETCHUP SLIDE) — PAFTA IMAGE 4!
+        // =========================================================================
+        ctx.fillStyle = 'rgba(185, 28, 28, 0.75)';
+        ctx.shadowColor = '#dc2626';
+        ctx.shadowBlur = 0; /* 60fps */
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, h.r, h.r * 0.52, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+  
+
